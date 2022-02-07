@@ -6,7 +6,7 @@
 
 #define DEBUG_ON
 int main(int argc, char* argv[]) {
-    power_on_nes("../test/Galaxian (J) [p1].nes");
+    power_on_nes("../test/Super Mario Bros (E).nes");
 
     return 0;
     
