@@ -4,8 +4,7 @@
 **Some nrom games can be played with minimum background rendering glitches**
 **Contains a mos 6502 assembler which is written in golang**
 
-Emulator is tested on pop os. SDL2 must be installed.
-Sound is not emulated yet
+Emulator is tested on pop os. SDL2 must be installed. Sound is not emulated yet.
 **Input** - D, F, Arrow Keys and Enter (start) and Space(select).
 **Screenshots of emulator running some games**
 
