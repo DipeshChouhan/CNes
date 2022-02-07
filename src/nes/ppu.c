@@ -559,7 +559,7 @@ void ppu_render(struct Cpu *cpu) {
 
             if (ppu_cycle == 320) {
                 if (RENDERING_ENABLED(ppu->ppu_mask)) {
-                    /* sprite_zero = render_sprites(sprite_pixels); */
+                    sprite_zero = render_sprites(sprite_pixels);
                 }
                 sprite_zero_current = sprite_zero_next;
                 cpu->mem[0x2003] = 0;
@@ -709,7 +709,7 @@ void ppu_render(struct Cpu *cpu) {
             }
         }
         if (ppu_cycle == 320) {
-            /* sprite_zero = render_sprites(sprite_pixels); */
+            sprite_zero = render_sprites(sprite_pixels);
             cpu->mem[0x2003] = 0;
             y = 0;
             while (y <= 256) {

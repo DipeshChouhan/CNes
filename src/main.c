@@ -1,12 +1,12 @@
 // TODO: Implement OAMDMA
-#include "./nes1/nes.h"
-#include "./nes1/ppu.h"
+#include "./nes/nes.h"
+#include "./nes/ppu.h"
 #include "mos_6502/cpu_impl.h"
 #include <SDL2/SDL.h>
 
 #define DEBUG_ON
 int main(int argc, char* argv[]) {
-    power_on_nes("../test/Contra (U).nes");
+    power_on_nes("../test/Galaxian (J) [p1].nes");
 
     return 0;
     
