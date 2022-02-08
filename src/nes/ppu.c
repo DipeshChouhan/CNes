@@ -322,7 +322,7 @@ int render_sprites(unsigned char *pixels) {
 }
 
 void ppu_render(struct Cpu *cpu) {
-    printf("ppu_status %d\n", ppu->ppu_status);
+    int number = 0;
     unsigned char sprite_pixels[257];
     SDL_Window *window;
     SDL_Renderer *renderer;
@@ -381,6 +381,7 @@ void ppu_render(struct Cpu *cpu) {
     while (1) {
         if (cpu_cycles == 0){
             cpu_cycles = cpu_cycle(cpu);
+            ++number;
             if (ppu->oam_dma == 1) {
                 if ((ppu->total_cycles & 1) == 1) {
                     cpu_cycles = (cpu_cycles + 514) * 3;
@@ -626,7 +627,7 @@ void ppu_render(struct Cpu *cpu) {
                 fetch_low_bg = 6;
                 fetch_high_bg = 8;
                 pixel_count = 0;
-                SDL_UpdateTexture(texture, NULL, &pixels, 256 * (sizeof(unsigned int)));
+                SDL_UpdateTexture(texture, NULL, pixels, 256 * (sizeof(unsigned int)));
                 SDL_RenderCopy(renderer, texture, NULL, NULL);
                 SDL_RenderPresent(renderer);
                 joypad_events();
@@ -646,6 +647,7 @@ void ppu_render(struct Cpu *cpu) {
             SDL_RenderCopy(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
             joypad_events();
+
             continue;
         } else if (ppu_cycle == fetch_nametable) {
             fetch_nametable += 8;
