@@ -6,7 +6,7 @@
 
 #define DEBUG_ON
 int main(int argc, char* argv[]) {
-    power_on_nes("../test/Contra (U).nes");
+    power_on_nes("../test/donkey_kong.nes");
 
     return 0;
     

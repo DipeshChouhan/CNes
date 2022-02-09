@@ -44,6 +44,9 @@
     }                                   \
 
 
+#define AT_X ((VRAM_X(ppu->v) / 2) % 2)
+#define AT_Y ((VRAM_Y(ppu->v) / 2) % 2)
+
 void print_nametables() {
     // name table 1 
     for (int i = 0; i < 960; i++) {
@@ -142,12 +145,37 @@ int horizontal_mirroring(int addr) {
 }
 
 
-#define LOAD_SHIFT_REGISTERS(_bg_latch)                 \
+#define LOAD_BG_REGISTERS(_bg_latch)                    \
     bg_low = bg_low | (_bg_latch & 0xFF);               \
     bg_high = bg_high | ((_bg_latch >> 8) & 0xFF);      \
+    at_low = at_low | ((at_latch & 1) ? 0xFF : 0x00);   \
+    at_high = at_high | ((at_latch & 2) ? 0xFF : 0x00); \
+
+#define UPDATE_BG_REGISTERS()   \
+    bg_low <<= 1;               \
+    bg_high <<= 1;              \
+    at_low <<= 1;               \
+    at_high <<= 1;              \
 
 
 void ppu_render(struct Cpu *cpu) {
+
+    unsigned int static_pallete[0x40] = {
+
+        0xFF808080, 0xFF003DA6, 0xFF0012B0, 0xFF440096, 0xFFA1005E,
+        0xFFC70028, 0xFFBA0600, 0xFF8C1700, 0xFF5C2F00, 0xFF104500,
+        0xFF054A00, 0xFF00472E, 0xFF004166, 0xFF000000, 0xFF050505,
+        0xFF050505, 0xFFC7C7C7, 0xFF0077FF, 0xFF2155FF, 0xFF8237FA,
+        0xFFEB2FB5, 0xFFFF2950, 0xFFFF2200, 0xFFD63200, 0xFFC46200,
+        0xFF358000, 0xFF058F00, 0xFF008A55, 0xFF0099CC, 0xFF212121,
+        0xFF090909, 0xFF090909, 0xFFFFFFFF, 0xFF0FD7FF, 0xFF69A2FF,
+        0xFFD480FF, 0xFFFF45F3, 0xFFFF618B, 0xFFFF8833, 0xFFFF9C12,
+        0xFFFABC20, 0xFF9FE30E, 0xFF2BF035, 0xFF0CF0A4, 0xFF05FBFF,
+        0xFF5E5E5E, 0xFF0D0D0D, 0xFF0D0D0D, 0xFFFFFFFF, 0xFFA6FCFF,
+        0xFFB3ECFF, 0xFFDAABEB, 0xFFFFA8F9, 0xFFFFABB3, 0xFFFFD2B0,
+        0xFFFFEFA6, 0xFFFFF79C, 0xFFD7E895, 0xFFA6EDAF, 0xFFA2F2DA,
+        0xFF99FFFC, 0xFFDDDDDD, 0xFF111111, 0xFF111111,
+    };
 
     int number = 0;
     SDL_Window *window;
@@ -181,6 +209,11 @@ void ppu_render(struct Cpu *cpu) {
     int addr_latch = 0;
 
     int nt = 0;
+    int at_low = 0;
+    int at_high = 0;
+    int at_latch = 0;
+    int pixel_bit = 0;
+    int bg_palette = 0;
     unsigned char bg_pixel = 0;
 
 
@@ -196,8 +229,8 @@ VISIBLE_SCANLINES:
         switch(ppu_cycle % 8) {
             case 1:
                 // nt byte
-               nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-                LOAD_SHIFT_REGISTERS(bg_latch);
+                nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
+                LOAD_BG_REGISTERS(bg_latch);
                 break;
 
             case 2:
@@ -207,10 +240,13 @@ VISIBLE_SCANLINES:
 
             case 3:
                 // at byte
+                at_latch = ppu->get_mirrored_addr(0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07));
                 break;
 
             case 4:
                 // at byte
+                at_latch = ppu->nametables[at_latch & 0xFFF];
+                at_latch = (at_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
                 break;
 
             case 5:
@@ -240,20 +276,22 @@ VISIBLE_SCANLINES:
                 }
                 break;
         }
-        bg_pixel = (((bg_high >> (15 - ppu->fine_x)) & 1) << 1) | ((bg_low >> (15 - ppu->fine_x)) & 1);
-        if (PPUMASK_BG_SHOW(ppu->ppu_mask)) {
-            if (ppu_cycle < 9 && PPUMASK_BG_LEFTMOST(ppu->ppu_mask) == 0) {
-                pixels[pixel_count++] = colors[0];
-            }else {
+        pixel_bit = 0x8000 >> ppu->fine_x;
+        bg_pixel = (((bg_high & pixel_bit) > 0) << 1) | ((bg_low & pixel_bit) > 0);
+        bg_palette = (((at_high & pixel_bit) > 0) << 1) | ((at_low & pixel_bit) > 0);
 
-                pixels[pixel_count++] = colors[bg_pixel];
-            }
+        if (bg_pixel == 0) {
+            pixels[pixel_count] = static_pallete[ppu->palette[0]];
         } else {
-            pixels[pixel_count++] = colors[0];
+            if (PPUMASK_BG_SHOW(ppu->ppu_mask)) {
+                pixels[pixel_count] = static_pallete[ppu->palette[(bg_palette * 4) + bg_pixel]];
+            } else {
+                pixels[pixel_count] = static_pallete[ppu->palette[0]];
+            }
         }
+        ++pixel_count;
         ++ppu_cycle;
-        bg_low <<= 1;
-        bg_high <<= 1;
+        UPDATE_BG_REGISTERS();
         goto VISIBLE_SCANLINES;
 
     } 
@@ -292,9 +330,8 @@ SPRITE_FETCH:
     // 321
     ++ppu_cycle;
     nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-    LOAD_SHIFT_REGISTERS(bg_latch);
-    bg_low <<= 1;
-    bg_high <<= 1;
+    /* LOAD_BG_REGISTERS(bg_latch); */
+    /* UPDATE_BG_REGISTERS(); */
 
 TWO_TILES:
     CPU_CYCLE(cpu);
@@ -305,7 +342,7 @@ TWO_TILES:
             case 1:
                 // nt byte
                 nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-                LOAD_SHIFT_REGISTERS(bg_latch);
+                LOAD_BG_REGISTERS(bg_latch);
                 break;
             case 2:
                 // nt byte
@@ -314,9 +351,12 @@ TWO_TILES:
 
             case 3:
                 // at byte
+                at_latch = ppu->get_mirrored_addr(0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07));
                 break;
             case 4:
                 // at byte
+                at_latch = ppu->nametables[at_latch & 0xFFF];
+                at_latch = (at_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
                 break;
 
             case 5:
@@ -344,8 +384,7 @@ TWO_TILES:
                 break;
         }
         ++ppu_cycle;
-        bg_low <<= 1;
-        bg_high <<= 1;
+        UPDATE_BG_REGISTERS();
         goto TWO_TILES;
     }
 
@@ -454,9 +493,8 @@ PRE_SPRITE_FETCH:
     // 321
     ++ppu_cycle;
     nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-    LOAD_SHIFT_REGISTERS(bg_latch);
-    bg_high <<= 1;
-    bg_low <<= 1;
+    /* LOAD_BG_REGISTERS(bg_latch); */
+    /* UPDATE_BG_REGISTERS(); */
 
 PRE_TWO_TILES:
     CPU_CYCLE(cpu);
@@ -467,7 +505,7 @@ PRE_TWO_TILES:
             case 1:
                 // nt byte
                 nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-                LOAD_SHIFT_REGISTERS(bg_latch);
+                LOAD_BG_REGISTERS(bg_latch);
                 break;
 
             case 2:
@@ -477,10 +515,13 @@ PRE_TWO_TILES:
 
             case 3:
                 // at byte
+                at_latch = ppu->get_mirrored_addr(0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07));
                 break;
 
             case 4:
                 // at byte
+                at_latch = ppu->nametables[at_latch & 0xFFF];
+                at_latch = (at_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
                 break;
 
             case 5:
@@ -507,8 +548,7 @@ PRE_TWO_TILES:
                 }
                 break;
         }
-        bg_low <<= 1;
-        bg_high <<= 1;
+        UPDATE_BG_REGISTERS();
         ++ppu_cycle;
         goto PRE_TWO_TILES;
     }
