@@ -222,6 +222,7 @@ VISIBLE_SCANLINES:
     --cycles;
     if (ppu_cycle == 0) {
         ++ppu_cycle;
+        ppu->total_sprites = 0; // secondary oam clear
         goto VISIBLE_SCANLINES;
     }
 
@@ -240,12 +241,12 @@ VISIBLE_SCANLINES:
 
             case 3:
                 // at byte
-                at_latch = ppu->get_mirrored_addr(0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07));
+                at_latch = ppu->get_mirrored_addr((0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07)) & 0xFFF);
                 break;
 
             case 4:
                 // at byte
-                at_latch = ppu->nametables[at_latch & 0xFFF];
+                at_latch = ppu->nametables[at_latch];
                 at_latch = (at_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
                 break;
 
@@ -329,9 +330,8 @@ SPRITE_FETCH:
 
     // 321
     ++ppu_cycle;
-    nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-    /* LOAD_BG_REGISTERS(bg_latch); */
-    /* UPDATE_BG_REGISTERS(); */
+    addr_latch = ppu->get_mirrored_addr(ppu->v & 0xFFF);
+    UPDATE_BG_REGISTERS();
 
 TWO_TILES:
     CPU_CYCLE(cpu);
@@ -341,21 +341,21 @@ TWO_TILES:
         switch(ppu_cycle % 8) {
             case 1:
                 // nt byte
-                nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
+                addr_latch = ppu->get_mirrored_addr(ppu->v & 0xFFF);
                 LOAD_BG_REGISTERS(bg_latch);
                 break;
             case 2:
                 // nt byte
-                nt = ppu->nametables[nt];
+                nt = ppu->nametables[addr_latch];
                 break;
 
             case 3:
                 // at byte
-                at_latch = ppu->get_mirrored_addr(0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07));
+                addr_latch = ppu->get_mirrored_addr((0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07)) & 0xFFF);
                 break;
             case 4:
                 // at byte
-                at_latch = ppu->nametables[at_latch & 0xFFF];
+                at_latch = ppu->nametables[addr_latch];
                 at_latch = (at_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
                 break;
 
@@ -492,9 +492,9 @@ PRE_SPRITE_FETCH:
 
     // 321
     ++ppu_cycle;
-    nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-    /* LOAD_BG_REGISTERS(bg_latch); */
-    /* UPDATE_BG_REGISTERS(); */
+    addr_latch = ppu->get_mirrored_addr(ppu->v & 0xFFF);
+    UPDATE_BG_REGISTERS();
+    
 
 PRE_TWO_TILES:
     CPU_CYCLE(cpu);
@@ -504,23 +504,23 @@ PRE_TWO_TILES:
         switch(ppu_cycle % 8) {
             case 1:
                 // nt byte
-                nt = ppu->get_mirrored_addr(ppu->v & 0xFFF);
+                addr_latch = ppu->get_mirrored_addr(ppu->v & 0xFFF);
                 LOAD_BG_REGISTERS(bg_latch);
                 break;
 
             case 2:
                 // nt byte
-                nt = ppu->nametables[nt];
+                nt = ppu->nametables[addr_latch];
                 break;
 
             case 3:
                 // at byte
-                at_latch = ppu->get_mirrored_addr(0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07));
+                addr_latch = ppu->get_mirrored_addr((0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07)) & 0xFFF);
                 break;
 
             case 4:
                 // at byte
-                at_latch = ppu->nametables[at_latch & 0xFFF];
+                at_latch = ppu->nametables[addr_latch];
                 at_latch = (at_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
                 break;
 
@@ -554,7 +554,7 @@ PRE_TWO_TILES:
     }
 
     if (ppu_cycle == 339) {
-        if ((frames & 1)) {
+        if (RENDERING_ENABLED(ppu->ppu_mask) && (frames & 1)) {
             scanline = 0;
             ppu_cycle = 0;
             ++frames;
