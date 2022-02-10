@@ -47,6 +47,7 @@
 #define AT_X ((VRAM_X(ppu->v) / 2) % 2)
 #define AT_Y ((VRAM_Y(ppu->v) / 2) % 2)
 
+
 void print_nametables() {
     // name table 1 
     for (int i = 0; i < 960; i++) {
@@ -212,9 +213,25 @@ void ppu_render(struct Cpu *cpu) {
     int at_low = 0;
     int at_high = 0;
     int at_latch = 0;
-    int pixel_bit = 0;
-    int bg_palette = 0;
+    int pixel_mux = 0;
+    unsigned char bg_palette = 0;
     unsigned char bg_pixel = 0;
+    unsigned char flip_h = 0;
+    unsigned char sprite_pixel = 0;
+    unsigned char sprite_palette = 0;
+    unsigned char sprite_priority = 0;
+    char pixel_type = 0;    // zero for background and 1 for sprite and 2 for sprite zero
+    int oam_count = 0;
+    unsigned char oam_data = 0;
+    unsigned char sprite_zero_next = 1;
+    unsigned char sprite_zero_current = 0;
+    unsigned char sprite_in_range = 0;
+
+    unsigned char sprites_attrs[8];
+    unsigned char sprites_x[8];
+    unsigned char sprites_low[8];
+    unsigned char sprites_high[8];
+    char sprites_to_render = 0;
 
 
 VISIBLE_SCANLINES:
@@ -277,17 +294,100 @@ VISIBLE_SCANLINES:
                 }
                 break;
         }
-        pixel_bit = 0x8000 >> ppu->fine_x;
-        bg_pixel = (((bg_high & pixel_bit) > 0) << 1) | ((bg_low & pixel_bit) > 0);
-        bg_palette = (((at_high & pixel_bit) > 0) << 1) | ((at_low & pixel_bit) > 0);
+
+        pixel_mux = PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl) ? 15 : 7; 
+
+        if (ppu_cycle > 64 && oam_count < 256 && PPUSTATUS_OVERFLOW(ppu->ppu_status) == 0) {
+
+            if (ppu_cycle & 1) {
+                // cycle is odd
+                if (ppu_cycle == 65) {
+                    oam_count = cpu->mem[0x2003];   // evaluation starts at this oam address(sprite zero) 
+                }
+
+                oam_data = ppu->oam[oam_count];
+            } else {
+                // cycle is even
+                // check of range
+                if (sprite_in_range == 0 && scanline >= oam_data && (scanline - oam_data) <= pixel_mux) {
+                    if (sprite_zero_next == 1) {
+                        sprite_zero_next = 2;
+                    }
+                    sprite_in_range = 4;
+                    if (ppu->total_sprites == 8) {
+                        PPUSTATUS_SET_OVERFLOW(ppu->ppu_status);
+                    } else {
+                        ++ppu->total_sprites;
+                        sprite_in_range = 0;
+                    }
+                }
+
+                sprite_zero_next &= 2;
+                if (sprite_in_range > 0) {
+                    ppu->oam2[oam_count++] = oam_data;
+                    --sprite_in_range;
+                } else {
+                    oam_count += 4;
+                }
+            }
+
+        }
+
+        sprites_to_render = 0;
+        pixel_type = 0;
+        while (sprites_to_render < ppu->total_sprites) {
+            printf("inside render %d\n", sprites_to_render);
+            flip_h = sprites_attrs[sprites_to_render] & 0b01000000;
+            if (sprites_x[sprites_to_render] == 1) {
+                if (flip_h) {
+                    sprite_pixel = ((sprites_high[sprites_to_render] & 1) << 1) | (sprites_low[sprites_to_render] & 1);
+                    sprites_low[sprites_to_render] >>= 1;
+                    sprites_high[sprites_to_render] >>= 1;
+                } else {
+                    sprite_pixel = ((sprites_high[sprites_to_render] >> 7) << 1) | (sprites_low[sprites_to_render] >> 7);
+                    sprites_low[sprites_to_render] <<= 1;
+                    sprites_high[sprites_to_render] <<= 1;
+                }
+
+                if (sprite_pixel > 0) {
+                    pixel_type = 1;
+                    sprite_palette = sprites_attrs[sprites_to_render] & 3;
+                    sprite_priority = sprites_attrs[sprites_to_render] & 0b00100000;
+                    break;
+                }
+            } else {
+                --sprites_x[sprites_to_render];
+            }
+            ++sprites_to_render;
+        }
+        
+
+        pixel_mux = 0x8000 >> ppu->fine_x;
+        bg_pixel = (((bg_high & pixel_mux) > 0) << 1) | ((bg_low & pixel_mux) > 0);
+        bg_palette = (((at_high & pixel_mux) > 0) << 1) | ((at_low & pixel_mux) > 0);
 
         if (bg_pixel == 0) {
-            pixels[pixel_count] = static_pallete[ppu->palette[0]];
-        } else {
-            if (PPUMASK_BG_SHOW(ppu->ppu_mask)) {
-                pixels[pixel_count] = static_pallete[ppu->palette[(bg_palette * 4) + bg_pixel]];
+            if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask) && pixel_type == 1) {
+                // show sprite
+                pixels[pixel_count] = static_pallete[ppu->palette[0x10 + (sprite_palette * 4) + sprite_pixel]];
             } else {
                 pixels[pixel_count] = static_pallete[ppu->palette[0]];
+            }
+        } else {
+            if (PPUMASK_BG_SHOW(ppu->ppu_mask)) {
+                if (pixel_type == 1 && PPUMASK_SPRITE_SHOW(ppu->ppu_mask) && sprite_priority == 0) {
+                    // show sprite
+                    pixels[pixel_count] = static_pallete[ppu->palette[0x10 + (sprite_palette * 4) + sprite_pixel]];
+                } else {
+                    pixels[pixel_count] = static_pallete[ppu->palette[(bg_palette * 4) + bg_pixel]];
+                }
+            } else {
+                if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask) && pixel_type == 1) {
+                    // show sprite
+                    pixels[pixel_count] = static_pallete[ppu->palette[0x10 + (sprite_palette * 4) + sprite_pixel]];
+                } else {
+                    pixels[pixel_count] = static_pallete[ppu->palette[0]];
+                }
             }
         }
         ++pixel_count;
@@ -302,27 +402,37 @@ VISIBLE_SCANLINES:
     }
     ++ppu_cycle;
 
+    /* oam_count = ppu->total_sprites * 4; */
+    sprites_to_render = 0;
+    oam_count = 0;
 SPRITE_FETCH:
     CPU_CYCLE(cpu);
     --cycles;
 
     if (ppu_cycle < 321) {
-        switch(ppu_cycle % 8) {
-            case 5:
-                // low sprite tile byte
-                break;
+        if (sprites_to_render < ppu->total_sprites) {
+            switch(ppu_cycle % 8) {
 
-            case 6:
-                // low sprite tile byte
-                break;
+                case 6:
+                    printf("%d\n", sprites_to_render);
+                    // low sprite tile byte
+                    addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | 
+                                ppu->oam2[oam_count + 1] | 
+                                (scanline - ppu->oam2[oam_count]);
+                    sprites_low[sprites_to_render] = ppu->ptables[addr_latch];
+                    sprites_attrs[sprites_to_render] = ppu->oam2[oam_count + 2];
+                    sprites_x[sprites_to_render] = ppu->oam2[oam_count + 3] + 1;
+                    break;
 
-            case 7:
-                // high sprite tile byte
-                break;
-
-            case 0:
-                // high sprite tile byte
-                break;
+                case 0:
+                    // high sprite tile byte
+                    printf("%d\n", sprites_to_render);
+                    sprites_high[sprites_to_render] = ppu->ptables[addr_latch | 8];
+                    /* sprites_to_render += 4; */
+                    ++sprites_to_render;
+                    oam_count += 4;
+                    break;
+            }
         }
         ++ppu_cycle;
         goto SPRITE_FETCH;
