@@ -59,6 +59,15 @@ void print_nametables() {
     printf("----------------------------------\n");
 
 }
+
+void print_oam2() {
+    for (int i = 0; i < 32; i += 4) {
+        printf("y - %d, tile - %d, at - %d, x - %d\n", ppu->oam2[i], ppu->oam2[i + 1], ppu->oam2[i + 2], ppu->oam2[i + 3]);
+    }
+    printf("____________________________________________\n");
+}
+
+
 void joypad_events() {
     while(SDL_PollEvent(&event)) {
         if (event.type == SDL_KEYDOWN) {
@@ -240,6 +249,7 @@ VISIBLE_SCANLINES:
     if (ppu_cycle == 0) {
         ++ppu_cycle;
         ppu->total_sprites = 0; // secondary oam clear
+        sprite_in_range = 0;
         goto VISIBLE_SCANLINES;
     }
 
@@ -297,6 +307,7 @@ VISIBLE_SCANLINES:
 
         pixel_mux = PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl) ? 15 : 7; 
 
+        /* printf("scanline - %d, oam_count - %d\n", scanline, oam_count); */
         if (ppu_cycle > 64 && oam_count < 256 && PPUSTATUS_OVERFLOW(ppu->ppu_status) == 0) {
 
             if (ppu_cycle & 1) {
@@ -310,15 +321,16 @@ VISIBLE_SCANLINES:
                 // cycle is even
                 // check of range
                 if (sprite_in_range == 0 && scanline >= oam_data && (scanline - oam_data) <= pixel_mux) {
+                    /* printf("y - %d\n", oam_data); */
                     if (sprite_zero_next == 1) {
                         sprite_zero_next = 2;
                     }
                     sprite_in_range = 4;
                     if (ppu->total_sprites == 8) {
                         PPUSTATUS_SET_OVERFLOW(ppu->ppu_status);
+                        sprite_in_range = 0;
                     } else {
                         ++ppu->total_sprites;
-                        sprite_in_range = 0;
                     }
                 }
 
@@ -336,7 +348,7 @@ VISIBLE_SCANLINES:
         sprites_to_render = 0;
         pixel_type = 0;
         while (sprites_to_render < ppu->total_sprites) {
-            printf("inside render %d\n", sprites_to_render);
+            printf("scanline - %d, ppu_cycle - %d\n", scanline, ppu_cycle);
             flip_h = sprites_attrs[sprites_to_render] & 0b01000000;
             if (sprites_x[sprites_to_render] == 1) {
                 if (flip_h) {
@@ -349,6 +361,7 @@ VISIBLE_SCANLINES:
                     sprites_high[sprites_to_render] <<= 1;
                 }
 
+                    /* printf("scanline - %d, ppu_cycle - %d\n", scanline, ppu_cycle); */
                 if (sprite_pixel > 0) {
                     pixel_type = 1;
                     sprite_palette = sprites_attrs[sprites_to_render] & 3;
@@ -400,25 +413,28 @@ VISIBLE_SCANLINES:
     if(RENDERING_ENABLED(ppu->ppu_mask)) {
         ppu->v = (ppu->v & HORIZONTAL_V) | (ppu->t & VERTICAL_V);
     }
-    ++ppu_cycle;
+    print_oam2();
+    printf("scanline - %d, sprites - %d\n", scanline, ppu->total_sprites);
+    /* printf("scanline - %d, sprites - %d\n", scanline, ppu->total_sprites); */
+    cpu->mem[0x2003] = 0;
 
     /* oam_count = ppu->total_sprites * 4; */
     sprites_to_render = 0;
-    oam_count = 0;
+    /* printf("total_sprites - %d\n", ppu->total_sprites); */
 SPRITE_FETCH:
     CPU_CYCLE(cpu);
     --cycles;
 
     if (ppu_cycle < 321) {
+        cpu->mem[0x2003] = 0;
         if (sprites_to_render < ppu->total_sprites) {
             switch(ppu_cycle % 8) {
 
                 case 6:
-                    printf("%d\n", sprites_to_render);
                     // low sprite tile byte
                     addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | 
-                                ppu->oam2[oam_count + 1] | 
-                                (scanline - ppu->oam2[oam_count]);
+                                    ppu->oam2[oam_count + 1] |ppu->oam2[oam_count];
+
                     sprites_low[sprites_to_render] = ppu->ptables[addr_latch];
                     sprites_attrs[sprites_to_render] = ppu->oam2[oam_count + 2];
                     sprites_x[sprites_to_render] = ppu->oam2[oam_count + 3] + 1;
@@ -426,7 +442,6 @@ SPRITE_FETCH:
 
                 case 0:
                     // high sprite tile byte
-                    printf("%d\n", sprites_to_render);
                     sprites_high[sprites_to_render] = ppu->ptables[addr_latch | 8];
                     /* sprites_to_render += 4; */
                     ++sprites_to_render;
@@ -436,7 +451,7 @@ SPRITE_FETCH:
         }
         ++ppu_cycle;
         goto SPRITE_FETCH;
-    }
+    /* printf("x - %d, at - %d\n", sprites_x[0], sprites_attrs[0]); */
 
     // 321
     ++ppu_cycle;
@@ -694,4 +709,5 @@ PRE_TWO_TILES:
     ++ppu_cycle;
     goto PRE_TWO_TILES;
 
+}
 }
