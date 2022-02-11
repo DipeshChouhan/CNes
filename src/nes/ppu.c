@@ -75,12 +75,10 @@ void print_pixels(unsigned int *pixels) {
 }
 
 void print_oam() {
-    for (int i = 0; i < 64; i++) {
-        if (i % 4 == 0) {
-            printf("\n");
-        }
-        printf(" %d ", ppu->oam[i]);
+    for (int i = 0; i < 256; i += 4) {
+        printf("y - %d, tile - %d, at - %d, x - %d\n", ppu->oam[i], ppu->oam[i + 1], ppu->oam[i + 2], ppu->oam[i + 3]);
     }
+    printf("_______________________________\n");
 }
 
 void display_pixels(int pt, unsigned int *pixels) {
