@@ -249,6 +249,9 @@ int horizontal_mirroring(int addr) {
                 break;                                                              \
         }                                                                           \
 
+/* #define SPRITE_TILE_LOADING()                                                                   \ */
+
+
 void ppu_render(struct Cpu *cpu) {
 
     unsigned int static_pallete[0x40] = {
@@ -324,6 +327,7 @@ void ppu_render(struct Cpu *cpu) {
     char sprite_palette = 0;
     char sprite_priority = 0;
     char sprite_flip = 0;
+    char check_sprite_zero_hit = 0;
 
 
 VISIBLE_SCANLINES:
@@ -382,7 +386,7 @@ VISIBLE_SCANLINES:
         }
 
         temp = 0;
-        sprite_pixel = 0;
+        check_sprite_zero_hit = 0;
         while (temp < sprites_to_render) {
             sprite_flip = sprites_attrs[temp] & 0b01000000;
             if (sprites_x[temp] == 1) {
@@ -393,6 +397,9 @@ VISIBLE_SCANLINES:
                         sprite_pixel = ((sprites_high[temp] & 1) << 1) | (sprites_low[temp] & 1);
                         sprite_palette = sprites_attrs[temp] & 3;
                         sprite_priority = sprites_attrs[temp] & 0b00100000;
+                        if (temp == 0 && sprite_pixel > 0) {
+                            check_sprite_zero_hit = 1;
+                        }
                     }
                     sprites_low[temp] >>= 1;
                     sprites_high[temp] >>= 1;
@@ -404,6 +411,9 @@ VISIBLE_SCANLINES:
                         sprite_pixel = ((sprites_high[temp] >> 7) << 1) | (sprites_low[temp] >> 7);
                         sprite_palette = sprites_attrs[temp] & 3;
                         sprite_priority = sprites_attrs[temp] & 0b00100000;
+                        if (temp == 0 && sprite_pixel > 0) {
+                            check_sprite_zero_hit = 1;
+                        }
                     }
                     sprites_low[temp] <<= 1;
                     sprites_high[temp] <<= 1;
@@ -419,39 +429,59 @@ VISIBLE_SCANLINES:
         bg_pixel = (((bg_high & pixel_mux) > 0) << 1) | ((bg_low & pixel_mux) > 0);
         bg_palette = (((at_high & pixel_mux) > 0) << 1) | ((at_low & pixel_mux) > 0);
 
-        if (bg_pixel == 0) {
-            if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask) && (sprite_pixel > 0)) {
-                pixels[pixel_count] = static_pallete[ppu->palette[0x10 + (sprite_palette * 4) + sprite_pixel]];
+        
+        if (PPUMASK_BG_SHOW(ppu->ppu_mask) == 0) {
+            bg_pixel = 0;
+        } else if (ppu_cycle < 9 && PPUMASK_BG_LEFTMOST(ppu->ppu_mask) == 0){
+            bg_pixel = 0;
+        }
+        if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask) == 0) {
+            sprite_pixel = 0;
+        } else if (ppu_cycle < 9 && PPUMASK_SPRITE_LEFTMOST(ppu->ppu_mask) == 0) {
+            sprite_pixel = 0;
+        }
+        
+
+        if (RENDERING_ENABLED(ppu->ppu_mask)) {
+            if (bg_pixel) {
+                if (sprite_pixel) {
+                    // SPRITE ZERO HIT
+                    if (PPUSTATUS_ZEROHIT(ppu->ppu_status) == 0 && sprite_zero_current == 2 && check_sprite_zero_hit) {
+                        PPUSTATUS_SET_ZEROHIT(ppu->ppu_status);
+                    }
+                    if (sprite_priority == 0) {
+                        pixels[pixel_count] = static_pallete[ppu->palette[0x10 + (sprite_palette * 4) + sprite_pixel]];
+                    } else {
+                        pixels[pixel_count] = static_pallete[ppu->palette[(bg_palette * 4) + bg_pixel]];
+                    }
+                    sprite_pixel = 0;
+                } else {
+                    // bg 
+                    pixels[pixel_count] = static_pallete[ppu->palette[(bg_palette * 4) + bg_pixel]];
+                }
+            } else if (sprite_pixel) {
+                    pixels[pixel_count] = static_pallete[ppu->palette[0x10 + (sprite_palette * 4) + sprite_pixel]];
+                    sprite_pixel = 0;
+
             } else {
+                // back drop color
                 pixels[pixel_count] = static_pallete[ppu->palette[0]];
             }
         } else {
-            if (PPUMASK_BG_SHOW(ppu->ppu_mask)) {
-                if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask) && (sprite_pixel > 0) && (sprite_priority == 0)) {
-                    pixels[pixel_count] = static_pallete[ppu->palette[0x10 + (sprite_palette * 4) + sprite_pixel]];
-                } else {
-                    pixels[pixel_count] = static_pallete[ppu->palette[(bg_palette * 4) + bg_pixel]];
-                }
-            } else {
-                if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask) && (sprite_pixel > 0)) {
-
-                    pixels[pixel_count] = static_pallete[ppu->palette[0x10 + (sprite_palette * 4) + sprite_pixel]];
+                if (ppu->v >= 0x3F00) {
+                    pixels[pixel_count] = static_pallete[ppu->palette[ppu->v & 0x1F]];
                 } else {
                     pixels[pixel_count] = static_pallete[ppu->palette[0]];
                 }
-            }
+                sprite_pixel = 0;
         }
+
         ++pixel_count;
         ++ppu_cycle;
         UPDATE_BG_REGISTERS();
         goto VISIBLE_SCANLINES;
 
     } 
-    /* printf("scanline - %d sprites - %d, _______________________________________\n", scanline, ppu->total_sprites); */
-    /* print_oam2(); */
-    /* printf("___________________________________________________________________\n"); */
-    /* print_oam(); */
-    // horizontal(v) = horizontal(t)
     if(RENDERING_ENABLED(ppu->ppu_mask)) {
         ppu->v = (ppu->v & HORIZONTAL_V) | (ppu->t & VERTICAL_V);
     }
@@ -499,10 +529,9 @@ SPRITE_FETCH:
         ++ppu_cycle;
         goto SPRITE_FETCH;
     }
-    /* printf("scanline - %d------------------------------\n", scanline); */
-    /* printf("sprites_to_render - %d\n", sprites_to_render); */
-    /* print_sprites_x(sprites_x); */
 
+    sprite_zero_current = sprite_zero_next;
+    sprite_zero_next = 1;
     // 321
     ++ppu_cycle;
     addr_latch = ppu->get_mirrored_addr(ppu->v & 0xFFF);
@@ -567,6 +596,8 @@ PRE_RENDER_SCANLINE:
     if (ppu_cycle == 1) {
         // clear vblank sprite and overflow
         ppu->ppu_status &= 0b00011111;
+        sprite_zero_current = 0;
+        sprite_zero_next = 1;
         ++ppu_cycle;
         goto PRE_RENDER_SCANLINE;
     }
@@ -595,7 +626,7 @@ PRE_RENDER_SCANLINE:
     }
     ++ppu_cycle;
 
-    /* temp = 0b000000000100000; */
+    temp = 0b000000000100000;
     cpu->mem[0x2003] = 0;
 
 PRE_SPRITE_FETCH:
@@ -604,35 +635,20 @@ PRE_SPRITE_FETCH:
 
     if (ppu_cycle < 321) {
         cpu->mem[0x2003] = 0;
-        /* if (ppu_cycle >= 285 && ppu_cycle <= 304) { */
-        /*     // copy vertical(v) = vertical(t) */
-        /*     if (ppu_cycle & 1) { */
-        /*         // odd cycle */
-        /*         oam_count2 = ppu->t & temp; */
+        // REMINDER: If any error occur check this for correctness.
+        if (ppu_cycle >= 285 && ppu_cycle <= 304) {
+            // copy vertical(v) = vertical(t)
+            if (ppu_cycle & 1) {
+                // odd cycle
+                oam_count2 = ppu->t & temp;
 
-        /*     } else { */
-        /*         // even cycle */
-        /*         if (temp != 1024 && RENDERING_ENABLED(ppu->ppu_mask)) { */
-        /*             ppu->v = (ppu->v & (~temp)) | oam_count2; */
-        /*         } */
-        /*         temp <<= 1; */
-        /*     } */
-        /* } */
-        switch(ppu_cycle % 8) {
-            case 5:
-                break;
-
-            case 6:
-                break;
-
-            case 7:
-                break;
-
-            case 0:
-                if (ppu_cycle == 304 && RENDERING_ENABLED(ppu->ppu_mask)) {
-                    ppu->v = (ppu->v & VERTICAL_V) | (ppu->t & HORIZONTAL_V);
+            } else {
+                // even cycle
+                if (temp != 1024 && RENDERING_ENABLED(ppu->ppu_mask)) {
+                    ppu->v = (ppu->v & (~temp)) | oam_count2;
                 }
-                break;
+                temp <<= 1;
+            }
         }
         ++ppu_cycle;
         goto PRE_SPRITE_FETCH;
