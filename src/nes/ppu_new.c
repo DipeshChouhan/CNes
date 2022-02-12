@@ -49,7 +49,6 @@
     } else {                                                                \
         cycles = 3;                                                         \
         if (cpu->total_cycles & 1) {                                        \
-            cycles *= 2;                                                    \
         }                                                                   \
         ppu->oam_dma = 0;                                                   \
         oamdma_count = 0;                                                   \
@@ -193,10 +192,12 @@ int horizontal_mirroring(int addr) {
     at_high = at_high | ((at_latch & 2) ? 0xFF : 0x00); \
 
 #define UPDATE_BG_REGISTERS()   \
-    bg_low <<= 1;               \
-    bg_high <<= 1;              \
-    at_low <<= 1;               \
-    at_high <<= 1;              \
+    if (PPUMASK_BG_SHOW(ppu->ppu_mask)) {   \
+        bg_low <<= 1;               \
+        bg_high <<= 1;              \
+        at_low <<= 1;               \
+        at_high <<= 1;              \
+    }                               \
 
 
 #define BACKGROUND_TILES()                                                          \
@@ -424,8 +425,10 @@ VISIBLE_SCANLINES:
                             check_sprite_zero_hit = 1;
                         }
                     }
-                    sprites_low[temp] >>= 1;
-                    sprites_high[temp] >>= 1;
+                    if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask)) {
+                        sprites_low[temp] >>= 1;
+                        sprites_high[temp] >>= 1;
+                    }
 
                 } else {
 
@@ -438,11 +441,16 @@ VISIBLE_SCANLINES:
                             check_sprite_zero_hit = 1;
                         }
                     }
-                    sprites_low[temp] <<= 1;
-                    sprites_high[temp] <<= 1;
+                    if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask)){
+
+                        sprites_low[temp] <<= 1;
+                        sprites_high[temp] <<= 1;
+                    }
                 }
             } else {
-                --sprites_x[temp];
+                if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask)) {
+                    --sprites_x[temp];
+                }
             }
             ++temp;
         }
@@ -526,19 +534,33 @@ SPRITE_FETCH:
                     // low sprite tile byte
                     sprites_x[sprites_to_render] = ppu->oam2[oam_count + 3] + 1;
                     sprites_attrs[sprites_to_render] = ppu->oam2[oam_count + 2];
-                    sprite_flip = sprites_attrs[sprites_to_render] & 0b10000000;
+                    sprite_flip = sprites_attrs[sprites_to_render] & 0x80;
                     /* addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | (ppu->oam2[oam_count + 1] << 4) | */
                     /*     (sprite_flip ? (7 - ppu->oam2[oam_count]) : ppu->oam2[oam_count]); */
-                    if (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl)) {
-                        /* addr_latch = ((ppu->oam2[oam_count] & 8) << 9) | ((ppu->oam2[oam_count + 1] & 0b11111110) << 4) | */
-                        /*     (sprite_flip ? (7 - ppu->oam2[oam_count] & 7) : (ppu->oam2[oam_count] & 7)); */
-                        addr_latch = ((ppu->oam2[oam_count + 1] & 1) << 12) | (((ppu->oam2[oam_count + 1] & 0b11111110) | (ppu->oam2[oam_count] >> 3)) << 4) | 
-                            (sprite_flip ? (7 - ppu->oam2[oam_count] & 7) : (ppu->oam2[oam_count] & 7));
-                    } else {
-                        addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | (ppu->oam2[oam_count + 1] << 4) |
-                            (sprite_flip ? (7 - ppu->oam2[oam_count]) : ppu->oam2[oam_count]);
+                    /* if (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl)) { */
+                    /*     addr_latch = ((ppu->oam2[oam_count + 1] & 1) << 12) | */ 
+                    /*         (((ppu->oam2[oam_count + 1] & 0b11111110) | */ 
+                    /*           (ppu->oam2[oam_count] >> 3)) << 4) | */ 
+                    /*         (sprite_flip ? (7 - ppu->oam2[oam_count] & 7) : */ 
+                    /*          (ppu->oam2[oam_count] & 7)); */
+                    /* } else { */
+                    /*     addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | */ 
+                    /*         (ppu->oam2[oam_count + 1] << 4) | */
+                    /*         (sprite_flip ? (7 - ppu->oam2[oam_count]) : ppu->oam2[oam_count]); */
 
+                    /* } */
+                    if (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl)) {
+                        addr_latch = ((ppu->oam2[oam_count + 1] & 1) * 0x1000) + 
+                            ((ppu->oam2[oam_count + 1] & ~1) * 16);
+                    } else {
+                        addr_latch = (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl) * 0x1000) +
+                            (ppu->oam2[oam_count + 1] * 16);
                     }
+                    temp = ppu->oam2[oam_count];
+                    if (sprite_flip) {
+                        temp ^= (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl)) ? 15 : 7;
+                    }
+                    addr_latch += temp + (temp & 8);
                     break;
 
                 case 6:
@@ -601,7 +623,6 @@ INVISIBLE_SCANLINES:
         PPUSTATUS_SET_VBLANK(ppu->ppu_status);
         if (PPUCTRL_NMI(ppu->ppu_ctrl)) {
             cpu->nmi = 1;
-
         }
     } else {
         if (ppu_cycle == 340) {
@@ -653,7 +674,7 @@ PRE_RENDER_SCANLINE:
 
 
     // horizontal (v) = horizontal(t)
-    sprites_to_render = 0;
+    /* sprites_to_render = 0; */
     if(RENDERING_ENABLED(ppu->ppu_mask)) {
         ppu->v = (ppu->v & HORIZONTAL_V) | (ppu->t & VERTICAL_V);
     }
@@ -706,7 +727,7 @@ PRE_TWO_TILES:
     }
 
     if (ppu_cycle == 339) {
-        if (RENDERING_ENABLED(ppu->ppu_mask) && (frames & 1)) {
+        if (PPUMASK_BG_SHOW(ppu->ppu_mask) && (frames & 1)) {
             scanline = 0;
             ppu_cycle = 0;
             ++frames;
@@ -715,7 +736,6 @@ PRE_TWO_TILES:
             SDL_RenderCopy(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
             joypad_events();
-           
             // render
             goto VISIBLE_SCANLINES;
         }

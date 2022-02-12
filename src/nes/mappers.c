@@ -252,6 +252,4 @@ void common_write(struct Cpu *cpu) {
             joypad1_read_count = 0;
         }
     }
-    /* printf("NES APU and I/O registers are not implemented yet!\n"); */
-    /* exit(1); */
 }

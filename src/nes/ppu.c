@@ -276,9 +276,11 @@ int render_sprites(unsigned char *pixels) {
         x = ppu->oam2[i + 3] + 1;
         attr = ppu->oam2[i + 2];
         flip_x = (attr & 0b01000000);
-        flip_y = (attr & 0b10000000) ? (sprite_size - ppu->oam2[i]) : ppu->oam2[i];
+        flip_y = (attr & 0b10000000) ? (7 - ppu->oam2[i]) : ppu->oam2[i];
+        int sprite_flip = attr & 0b10000000;
         if (sprite_size == 15) {
-            plane0 = ((ppu->oam2[i + 1] & 1) << 12) | ((ppu->oam2[i + 1] & 0b11111110) << 4) | flip_y;
+            plane0 = ((ppu->oam2[i + 1] & 1) << 12) | (((ppu->oam2[i + 1] & 0b11111110) | (ppu->oam2[i] >> 3)) << 4) | 
+                (sprite_flip ? (7 - ppu->oam2[i] & 7) : (ppu->oam2[i] & 7));
         } else {
             plane0 = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | (ppu->oam2[i + 1] << 4) | flip_y;
         }
@@ -342,7 +344,7 @@ void ppu_render(struct Cpu *cpu) {
     
     int total_cycles = 7;
     int frames = 0;
-    int scanlines = 0;
+    int scanlines = 261;
     int ppu_cycle = 0;
     int nametable_addr_latch = 0;
     int nametable_byte_latch = 0;

@@ -31,7 +31,7 @@ void uxrom_write(struct Cpu *cpu) {
         return;
     }
     printf("uxrom_write to 0x%X\n", cpu->address_bus);
-    exit(1);
+    /* exit(1); */
 }
 
 void uxrom_vram_read(struct Cpu *cpu) {

@@ -7,7 +7,7 @@
 
 /* #define DEBUG_ON */
 #define PRINT(_cpu)                                                 \
-    printf("%0X     , A: %0X    , X: %0X    , Y: %0X    , PS: %0X   , SP: %0X\n", _cpu->pc, _cpu->a, _cpu->x, _cpu->y, _cpu->ps.value, _cpu->sp); \
+    printf("%0X     , A: %0X    , X: %0X    , Y: %0X    , PS: %0X   , SP: %0X, cycles - %d\n", _cpu->pc, _cpu->a, _cpu->x, _cpu->y, _cpu->ps.value, _cpu->sp, cpu->total_cycles); \
 
 static void cpu_read(struct Cpu *cpu) {
     printf("error\n");

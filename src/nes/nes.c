@@ -66,6 +66,9 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
             mapper_type, mirroring, trainer, prg_rom_size*0x4000, chr_rom_size * 0x2000, have_prg_ram);
 
     int count = 16;
+    if (mapper_type == 66) {
+        mapper_type = 2;
+    }
 
     switch (mapper_type) {
         // mapper nrom
@@ -137,6 +140,10 @@ void power_on_nes(char *game_file) {
     p.total_sprites = 0;
     p.total_cycles = 0;
     p.oam_dma = 0;
+    p.write_toggle = 0;
+    p.ppu_status = 0;
+    p.ppu_ctrl = 0;
+    p.ppu_mask = 0;
     ppu = &p;
     Mapper m;
     mapper = &m;
