@@ -233,14 +233,16 @@ void common_write(struct Cpu *cpu) {
     // nes apu and io registers
     if (cpu->address_bus == OAMDMA) {
         // OAMDMA       // write
-        int addr = cpu->data_bus << 8;
-        int oam_addr = cpu->mem[OAMADDR];
+        /* int addr = cpu->data_bus << 8; */
+        /* int oam_addr = cpu->mem[OAMADDR]; */
+        cpu_oamdma_addr = cpu->data_bus << 8;
+        oamdma_addr = cpu->mem[OAMADDR];
         ppu->oam_dma = 1;
 
-        for (int i = 0; i < 256; i++) {
-            ppu->oam[oam_addr & 0xFF] = cpu->mem[addr++];
-            ++oam_addr;
-        }
+        /* for (int i = 0; i < 256; i++) { */
+        /*     ppu->oam[oam_addr & 0xFF] = cpu->mem[addr++]; */
+        /*     ++oam_addr; */
+        /* } */
         return;
     }
 

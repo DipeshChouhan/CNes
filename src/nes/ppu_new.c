@@ -38,11 +38,32 @@
         _v = (_v & ~0x03E0) | (temp << 5);      \
     }                                           \
 
-#define CPU_CYCLE(_cpu)                 \
-    if (cycles == 0) {                  \
-        ++number;                       \
-        cycles = cpu_cycle(_cpu) * 3;    \
-    }                                   \
+#define OAMDMA_CYCLE(_cpu)                                                  \
+    if (oamdma_count < 512) {                                               \
+        if ((oamdma_count & 1) == 0) {                                      \
+            ppu->oam[oamdma_addr & 0xFF] = cpu->mem[cpu_oamdma_addr++];     \
+            ++oamdma_addr;                                                  \
+        }                                                                   \
+        cycles = 3;                                                         \
+        ++oamdma_count;                                                     \
+    } else {                                                                \
+        cycles = 3;                                                         \
+        if (cpu->total_cycles & 1) {                                        \
+            cycles *= 2;                                                    \
+        }                                                                   \
+        ppu->oam_dma = 0;                                                   \
+        oamdma_count = 0;                                                   \
+    }                                                                       \
+
+
+#define CPU_CYCLE(_cpu)                     \
+    if (cycles == 0) {                      \
+        if (ppu->oam_dma) {                 \
+            OAMDMA_CYCLE(_cpu);             \
+        } else {                            \
+            cycles = cpu_cycle(_cpu) * 3;   \
+        }                                   \
+    }                                       \
 
 
 #define AT_X ((VRAM_X(ppu->v) / 2) % 2)
@@ -249,8 +270,6 @@ int horizontal_mirroring(int addr) {
                 break;                                                              \
         }                                                                           \
 
-/* #define SPRITE_TILE_LOADING()                                                                   \ */
-
 
 void ppu_render(struct Cpu *cpu) {
 
@@ -271,7 +290,8 @@ void ppu_render(struct Cpu *cpu) {
         0xFF99FFFC, 0xFFDDDDDD, 0xFF111111, 0xFF111111,
     };
 
-    int number = 0;
+    int oamdma_count= 0;
+
     SDL_Window *window;
     SDL_Renderer *renderer;
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -329,6 +349,9 @@ void ppu_render(struct Cpu *cpu) {
     char sprite_flip = 0;
     char check_sprite_zero_hit = 0;
 
+    if (cycles == 0) {
+        cycles = cpu_cycle(cpu) * 3;
+    }
 
 VISIBLE_SCANLINES:
     CPU_CYCLE(cpu);
@@ -446,7 +469,7 @@ VISIBLE_SCANLINES:
             if (bg_pixel) {
                 if (sprite_pixel) {
                     // SPRITE ZERO HIT
-                    if (PPUSTATUS_ZEROHIT(ppu->ppu_status) == 0 && sprite_zero_current == 2 && check_sprite_zero_hit) {
+                    if (PPUSTATUS_ZEROHIT(ppu->ppu_status) == 0 && sprite_zero_current == 2 && ppu_cycle < 256 && check_sprite_zero_hit) {
                         PPUSTATUS_SET_ZEROHIT(ppu->ppu_status);
                     }
                     if (sprite_priority == 0) {
@@ -504,8 +527,18 @@ SPRITE_FETCH:
                     sprites_x[sprites_to_render] = ppu->oam2[oam_count + 3] + 1;
                     sprites_attrs[sprites_to_render] = ppu->oam2[oam_count + 2];
                     sprite_flip = sprites_attrs[sprites_to_render] & 0b10000000;
-                    addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | (ppu->oam2[oam_count + 1] << 4) |
-                        (sprite_flip ? (7 - ppu->oam2[oam_count]) : ppu->oam2[oam_count]);
+                    /* addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | (ppu->oam2[oam_count + 1] << 4) | */
+                    /*     (sprite_flip ? (7 - ppu->oam2[oam_count]) : ppu->oam2[oam_count]); */
+                    if (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl)) {
+                        /* addr_latch = ((ppu->oam2[oam_count] & 8) << 9) | ((ppu->oam2[oam_count + 1] & 0b11111110) << 4) | */
+                        /*     (sprite_flip ? (7 - ppu->oam2[oam_count] & 7) : (ppu->oam2[oam_count] & 7)); */
+                        addr_latch = ((ppu->oam2[oam_count + 1] & 1) << 12) | (((ppu->oam2[oam_count + 1] & 0b11111110) | (ppu->oam2[oam_count] >> 3)) << 4) | 
+                            (sprite_flip ? (7 - ppu->oam2[oam_count] & 7) : (ppu->oam2[oam_count] & 7));
+                    } else {
+                        addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | (ppu->oam2[oam_count + 1] << 4) |
+                            (sprite_flip ? (7 - ppu->oam2[oam_count]) : ppu->oam2[oam_count]);
+
+                    }
                     break;
 
                 case 6:
@@ -633,6 +666,7 @@ PRE_SPRITE_FETCH:
     CPU_CYCLE(cpu);
     --cycles;
 
+    
     if (ppu_cycle < 321) {
         cpu->mem[0x2003] = 0;
         // REMINDER: If any error occur check this for correctness.

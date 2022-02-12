@@ -17,6 +17,9 @@ static int sprite_zero_current = 0;
 #define HORIZONTAL_V 0b1111101111100000
 #define VERTICAL_V   0b1000010000011111
 
+#define AT_X ((VRAM_X(ppu->v) / 2) % 2)
+#define AT_Y ((VRAM_Y(ppu->v) / 2) % 2)
+
 #define INC_HORIZONTAL_V(_v)                    \
     if ((_v & 0x001F) == 31){                   \
         _v &= ~0x001F;                          \
@@ -391,7 +394,6 @@ void ppu_render(struct Cpu *cpu) {
                 ppu->total_cycles += cpu_cycles;
                 cpu_cycles *= 3;
             }
-            /* } */
         }
         --cpu_cycles;
 
@@ -414,20 +416,13 @@ void ppu_render(struct Cpu *cpu) {
                 
                 continue;
             } else if (ppu_cycle == fetch_nametable) {
-                nametable_addr_latch = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-                nametable_byte_latch = ppu->nametables[nametable_addr_latch];
-                nametable_row = (nametable_addr_latch & 1023) / 32;
-                nametable_column = nametable_addr_latch % 32;
+                nametable_byte_latch = ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)];
                 fetch_nametable += 8;
 
             } else if (ppu_cycle == fetch_attribute) {
                 fetch_attribute += 8;
-                attribute_byte_latch = (nametable_row / 4) * 8 + (nametable_column/4);
-                
-                attribute_byte_latch = ppu->nametables[(nametable_addr_latch < 1024 ? (960 + attribute_byte_latch) : (1984 + attribute_byte_latch))];
-                nametable_row = (nametable_row / 2) % 2;
-                nametable_column = (nametable_column / 2) % 2;
-                attribute_byte_latch  = (attribute_byte_latch >> (((nametable_row << 1) | nametable_column) << 1)) & 3;
+                attribute_byte_latch = ppu->nametables[ ppu->get_mirrored_addr((0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07)) & 0xFFF)];
+                attribute_byte_latch = (attribute_byte_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
 
             } else if (ppu_cycle == fetch_low_bg) {
                 tile_latch = ppu->ptables[((PPUCTRL_BG(ppu->ppu_ctrl) << 12) | (nametable_byte_latch << 4) | (VRAM_FINE_Y(ppu->v)))];
@@ -598,15 +593,8 @@ void ppu_render(struct Cpu *cpu) {
             // clear vblank, sprite hit, and overflow
             low_bg_tiles = 0;
             high_bg_tiles = 0;
-            if (PPUSTATUS_ZEROHIT(ppu->ppu_status)) {
-                /* exit(1); */
-            }
             ppu->ppu_status &= 0b00011111;
         
-            /* y = 0; */
-            /* while (y < 32) { */
-            /*     ppu->oam2[y++] = 0xFF; */
-            /* } */
         } else if (ppu_cycle == 337) {
             ++ppu_cycle;
             continue;
@@ -652,19 +640,15 @@ void ppu_render(struct Cpu *cpu) {
             if (ppu_cycle > 320) {
                 // fetch nametable
                 nametable_addr_latch = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-                nametable_byte_latch = ppu->nametables[nametable_addr_latch];
-                nametable_row = (nametable_addr_latch & 1023) / 32;
-                nametable_column = nametable_addr_latch % 32;
+                nametable_byte_latch = ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)];
             }
         } else if (ppu_cycle == fetch_attribute) {
             fetch_attribute += 8;
             if (ppu_cycle > 320) {
                 // fetch attribute
-                attribute_byte_latch = (nametable_row / 4) * 8 + (nametable_column/4);
-                attribute_byte_latch = ppu->nametables[(nametable_addr_latch < 960 ? (960 + attribute_byte_latch) : (1984 + attribute_byte_latch))];
-                nametable_row = (nametable_row / 2) % 2;
-                nametable_column = (nametable_column / 2) % 2;
-                attribute_byte_latch  = (attribute_byte_latch >> (((nametable_row << 1) | nametable_column) << 1)) & 3;
+                attribute_byte_latch = ppu->nametables[ ppu->get_mirrored_addr((0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07)) & 0xFFF)];
+                /* attribute_byte_latch = ppu->nametables[(nametable_addr_latch < 960 ? (960 + attribute_byte_latch) : (1984 + attribute_byte_latch))]; */
+                attribute_byte_latch = (attribute_byte_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
             }
 
         } else if (ppu_cycle == fetch_low_bg) {

@@ -7,6 +7,9 @@
 extern Ppu *ppu;
 extern SDL_Event event;
 
+extern int cpu_oamdma_addr;
+extern int oamdma_addr;
+
 extern unsigned char joypad1;
 extern unsigned char joypad2;
 /* extern */ 

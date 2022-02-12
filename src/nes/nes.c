@@ -15,6 +15,9 @@ unsigned char joypad1 = 0;
 unsigned char joypad2 = 0;
 Mapper *mapper;
 
+int cpu_oamdma_addr = 0;
+int oamdma_addr = 0;
+
 void loadMapper(char *game_file, struct Cpu *cpu) {
     unsigned int size; unsigned char *data = load_binary_file(game_file, &size);
 

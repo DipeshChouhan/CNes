@@ -40,6 +40,7 @@ union flags {
     uint8_t irq;            // irq pin
     uint8_t rw;             // read write pin
     uint8_t sync;           // sync pin
+    unsigned int total_cycles;
     void (*cpu_read)(struct Cpu *cpu);
     void (*cpu_write)(struct Cpu *cpu);
 };
