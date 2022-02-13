@@ -6,12 +6,7 @@
 
 #define DEBUG_ON
 int main(int argc, char* argv[]) {
-<<<<<<< HEAD
-    power_on_nes("../test/Galaxian (J) [p1].nes");
-=======
-    power_on_nes("../test/Metal Gear (USA).nes");
->>>>>>> new_ppu
-
+    power_on_nes("../test/Super Mario Bros (E) (1).nes");
     return 0;
     
 }

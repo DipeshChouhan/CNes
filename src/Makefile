@@ -1,9 +1,5 @@
 all:
-<<<<<<< HEAD
-	gcc -O2 main.c ./mos_6502/cpu_impl.c ./nes/nes.c ./nes/ppu_new.c ./nes/mappers.c ./nes/mappers/nrom.c ./nes/mappers/uxrom.c utils.c  -o emu `sdl2-config --cflags --libs`; ./emu 
-=======
 	gcc -O2 main.c ./mos_6502/cpu_impl.c ./nes/nes.c ./nes/controllers/joypad.c ./nes/ppu_new.c ./nes/mappers.c ./nes/mappers/nrom.c ./nes/mappers/uxrom.c utils.c  -o emu `sdl2-config --cflags --libs`; ./emu 
->>>>>>> new_ppu
 
 clean:
 	rm ./emu
