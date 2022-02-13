@@ -10,12 +10,12 @@ Emulator is tested on linux. SDL2 must be installed. Sound is not emulated yet.
 
 ![Galaxian](https://github.com/DipeshChouhan/CNes/blob/main/images/galaxian.png)
 
-![Super Mario Bros](https://github.com/DipeshChouhan/CNes/blob/main/images/super mario bros.png)
+![Super Mario Bros](https://github.com/DipeshChouhan/CNes/blob/main/images/super_mario_bros.png)
 
 ![Contra](https://github.com/DipeshChouhan/CNes/blob/main/images/contra.png)
 
 ![Castlevania](https://github.com/DipeshChouhan/CNes/blob/main/images/castlevania.png)
 
-![Megaman](https://github.com/DipeshChouhan/CNes/blob/main/images/castlevania.png)
+![Megaman](https://github.com/DipeshChouhan/CNes/blob/main/images/megaman.png)
 
-![Metal Gear](https://github.com/DipeshChouhan/CNes/blob/main/images/meta gear.png)
+![Metal Gear](https://github.com/DipeshChouhan/CNes/blob/main/images/meta_gear.png)
