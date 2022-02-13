@@ -478,14 +478,7 @@ SPRITE_FETCH:
                             ((ppu->oam2[oam_count + 1] & 0b11111110) << 4);
 
                         if (sprite_flip) {
-                            if (ppu->oam2[oam_count + 1] & 1) {
-                                // tile is odd
-                                addr_latch = addr_latch | ((ppu->oam2[oam_count] & 8) << 1);
-                            } else {
-                                // tile is even and flipped
-                                addr_latch = addr_latch | (((ppu->oam2[oam_count] ^ 8) & 8) << 1);
-                            }
-                            addr_latch = addr_latch | (7 - ppu->oam2[oam_count] & 7);
+                            addr_latch = addr_latch | (((ppu->oam2[oam_count] ^ 8) & 8) << 1) | (7 - ppu->oam2[oam_count] & 7);
                         } else {
                             addr_latch = addr_latch | ((ppu->oam2[oam_count] & 8) << 1) | (ppu->oam2[oam_count] & 7);
                         }

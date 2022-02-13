@@ -1,17 +1,21 @@
 # CNes
 ## Nes emulator written in c.
 
-**Some nrom games can be played with minimum background rendering glitches**
-**Contains a mos 6502 assembler which is written in golang**
+**Contains a mos 6502 assembler which is written in golang (Very basic)**
 
-Emulator is tested on pop os. SDL2 must be installed. Sound is not emulated yet.
-**Input** - D, F, Arrow Keys and Enter (start) and Space(select).
-**Screenshots of emulator running some games**
+Emulator is tested on linux. SDL2 must be installed. Sound is not emulated yet.
+**Input** - F (A), D (B), Arrow Keys (Directions) and Enter (start) and Space(select).
 
-![Galaxian](https://github.com/DipeshChouhan/CNes/blob/main/images/Screenshot%20from%202022-02-07%2014-10-48.png)
+**Screenshots of emulator running some games of NROM and UxROM mappers**
 
-![Super Mario Bros](https://github.com/DipeshChouhan/CNes/blob/main/images/Screenshot%20from%202022-02-07%2014-11-23.png)
+![Galaxian](https://github.com/DipeshChouhan/CNes/blob/main/images/galaxian.png)
 
-![Super Mario Bros with background rendering error.](https://github.com/DipeshChouhan/CNes/blob/main/images/Screenshot%20from%202022-02-07%2014-11-43.png)
+![Super Mario Bros](https://github.com/DipeshChouhan/CNes/blob/main/images/super mario bros.png)
 
-**Games which don't scroll horizontal renders correctly like Ice Climber and games like donkey kong which don't scroll at all.**
+![Contra](https://github.com/DipeshChouhan/CNes/blob/main/images/contra.png)
+
+![Castlevania](https://github.com/DipeshChouhan/CNes/blob/main/images/castlevania.png)
+
+![Megaman](https://github.com/DipeshChouhan/CNes/blob/main/images/castlevania.png)
+
+![Metal Gear](https://github.com/DipeshChouhan/CNes/blob/main/images/meta gear.png)
