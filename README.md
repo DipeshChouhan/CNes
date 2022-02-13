@@ -18,4 +18,4 @@ Emulator is tested on linux. SDL2 must be installed. Sound is not emulated yet.
 
 ![Megaman](https://github.com/DipeshChouhan/CNes/blob/main/images/megaman.png)
 
-![Metal Gear](https://github.com/DipeshChouhan/CNes/blob/main/images/metagear.png)
+![Metal Gear](https://github.com/DipeshChouhan/CNes/blob/main/images/metalgear.png)
