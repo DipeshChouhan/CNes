@@ -11,9 +11,10 @@
 
 Ppu *ppu;
 SDL_Event event;
-unsigned char joypad1 = 0;
-unsigned char joypad2 = 0;
 Mapper *mapper;
+
+int cpu_oamdma_addr = 0;
+int oamdma_addr = 0;
 
 void loadMapper(char *game_file, struct Cpu *cpu) {
     unsigned int size; unsigned char *data = load_binary_file(game_file, &size);
@@ -63,6 +64,9 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
             mapper_type, mirroring, trainer, prg_rom_size*0x4000, chr_rom_size * 0x2000, have_prg_ram);
 
     int count = 16;
+    if (mapper_type == 66) {
+        mapper_type = 2;
+    }
 
     switch (mapper_type) {
         // mapper nrom
@@ -134,6 +138,10 @@ void power_on_nes(char *game_file) {
     p.total_sprites = 0;
     p.total_cycles = 0;
     p.oam_dma = 0;
+    p.write_toggle = 0;
+    p.ppu_status = 0;
+    p.ppu_ctrl = 0;
+    p.ppu_mask = 0;
     ppu = &p;
     Mapper m;
     mapper = &m;

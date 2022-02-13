@@ -183,7 +183,7 @@ typedef struct {
     unsigned char ppu_mask;
     unsigned char ppu_status;
     int total_cycles;
-    unsigned char oam_dma;
+    char oam_dma;
     int (*get_mirrored_addr)(int);
 } Ppu;
 

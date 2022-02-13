@@ -7,7 +7,7 @@
 
 /* #define DEBUG_ON */
 #define PRINT(_cpu)                                                 \
-    printf("%0X     , A: %0X    , X: %0X    , Y: %0X    , PS: %0X   , SP: %0X\n", _cpu->pc, _cpu->a, _cpu->x, _cpu->y, _cpu->ps.value, _cpu->sp); \
+    printf("%0X     , A: %0X    , X: %0X    , Y: %0X    , PS: %0X   , SP: %0X, cycles - %d\n", _cpu->pc, _cpu->a, _cpu->x, _cpu->y, _cpu->ps.value, _cpu->sp, cpu->total_cycles); \
 
 static void cpu_read(struct Cpu *cpu) {
     printf("error\n");
@@ -297,6 +297,7 @@ void power_on(struct Cpu *cpu) {
     cpu->address_bus = RESET_VECTOR_HIGH;
     cpu->cpu_read(cpu);
     cpu->pc = (cpu->data_bus << 8) | cpu->pc;   // T6   PCH PCL
+    cpu->total_cycles = 7;
     printf("pc vector %0X\n", cpu->pc);
 
     /* printf("power on %0x\n", cpu->pc); */
@@ -322,6 +323,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         adh = cpu->data_bus;
         cpu->pc = (adh << 8)|adl;
         cpu->nmi = 0;
+        cpu->total_cycles += 7;
         return 7;
     }
     
@@ -2458,6 +2460,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             printf("%0X Wrong opcode %0x\n", cpu->pc, cpu->ir);
             exit(1);
     }
+    cpu->total_cycles += cycles;
     return cycles;
 }
 

@@ -17,6 +17,9 @@ static int sprite_zero_current = 0;
 #define HORIZONTAL_V 0b1111101111100000
 #define VERTICAL_V   0b1000010000011111
 
+#define AT_X ((VRAM_X(ppu->v) / 2) % 2)
+#define AT_Y ((VRAM_Y(ppu->v) / 2) % 2)
+
 #define INC_HORIZONTAL_V(_v)                    \
     if ((_v & 0x001F) == 31){                   \
         _v &= ~0x001F;                          \
@@ -75,12 +78,10 @@ void print_pixels(unsigned int *pixels) {
 }
 
 void print_oam() {
-    for (int i = 0; i < 64; i++) {
-        if (i % 4 == 0) {
-            printf("\n");
-        }
-        printf(" %d ", ppu->oam[i]);
+    for (int i = 0; i < 256; i += 4) {
+        printf("y - %d, tile - %d, at - %d, x - %d\n", ppu->oam[i], ppu->oam[i + 1], ppu->oam[i + 2], ppu->oam[i + 3]);
     }
+    printf("_______________________________\n");
 }
 
 void display_pixels(int pt, unsigned int *pixels) {
@@ -193,70 +194,6 @@ void evaluate_sprites(int scanline, int oam_addr) {
     /* printf("eval total_sprites - %d\n", ppu->total_sprites); */
 }
 
-
-void joypad_events() {
-    while(SDL_PollEvent(&event)) {
-        if (event.type == SDL_KEYDOWN) {
-            switch(event.key.keysym.sym) {
-                case SDLK_d:
-                    JOYPAD_SET(joypad1, BUTTON_A);
-                    break;
-                case SDLK_f:
-                    JOYPAD_SET(joypad1, BUTTON_B);
-                    break;
-                case SDLK_RETURN:
-                    JOYPAD_SET(joypad1, BUTTON_START);
-                    break;
-                case SDLK_SPACE:
-                    JOYPAD_SET(joypad1, BUTTON_SELECT);
-                    break;
-                case SDLK_DOWN:
-                    JOYPAD_SET(joypad1, BUTTON_DOWN);
-                    break;
-                case SDLK_UP:
-                    JOYPAD_SET(joypad1, BUTTON_UP);
-                    break;
-                case SDLK_LEFT:
-                    JOYPAD_SET(joypad1, BUTTON_LEFT);
-                    break;
-                case SDLK_RIGHT:
-                    JOYPAD_SET(joypad1, BUTTON_RIGHT);
-                    break;
-            }
-        } else if(event.type == SDL_KEYUP) {
-
-            switch(event.key.keysym.sym) {
-                case SDLK_d:
-                    JOYPAD_CLEAR(joypad1, BUTTON_A);
-                    break;
-                case SDLK_f:
-                    JOYPAD_CLEAR(joypad1, BUTTON_B);
-                    break;
-                case SDLK_RETURN:
-                    JOYPAD_CLEAR(joypad1, BUTTON_START);
-                    break;
-                case SDLK_SPACE:
-                    JOYPAD_CLEAR(joypad1, BUTTON_SELECT);
-                    break;
-                case SDLK_DOWN:
-                    JOYPAD_CLEAR(joypad1, BUTTON_DOWN);
-                    break;
-                case SDLK_UP:
-                    JOYPAD_CLEAR(joypad1, BUTTON_UP);
-                    break;
-                case SDLK_LEFT:
-                    JOYPAD_CLEAR(joypad1, BUTTON_LEFT);
-                    break;
-                case SDLK_RIGHT:
-                    JOYPAD_CLEAR(joypad1, BUTTON_RIGHT);
-                    break;
-            }
-        } else if (event.type == SDL_QUIT) {
-            SDL_Quit();
-            exit(0);
-        }
-    }
-}
 int render_sprites(unsigned char *pixels) {
     /* printf("total_sprites - %d\n", ppu->total_sprites); */
     int x;
@@ -275,9 +212,11 @@ int render_sprites(unsigned char *pixels) {
         x = ppu->oam2[i + 3] + 1;
         attr = ppu->oam2[i + 2];
         flip_x = (attr & 0b01000000);
-        flip_y = (attr & 0b10000000) ? (sprite_size - ppu->oam2[i]) : ppu->oam2[i];
+        flip_y = (attr & 0b10000000) ? (7 - ppu->oam2[i]) : ppu->oam2[i];
+        int sprite_flip = attr & 0b10000000;
         if (sprite_size == 15) {
-            plane0 = ((ppu->oam2[i + 1] & 1) << 12) | ((ppu->oam2[i + 1] & 0b11111110) << 4) | flip_y;
+            plane0 = ((ppu->oam2[i + 1] & 1) << 12) | (((ppu->oam2[i + 1] & 0b11111110) | (ppu->oam2[i] >> 3)) << 4) | 
+                (sprite_flip ? (7 - ppu->oam2[i] & 7) : (ppu->oam2[i] & 7));
         } else {
             plane0 = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | (ppu->oam2[i + 1] << 4) | flip_y;
         }
@@ -322,7 +261,7 @@ int render_sprites(unsigned char *pixels) {
 }
 
 void ppu_render(struct Cpu *cpu) {
-    printf("ppu_status %d\n", ppu->ppu_status);
+    int number = 0;
     unsigned char sprite_pixels[257];
     SDL_Window *window;
     SDL_Renderer *renderer;
@@ -341,7 +280,7 @@ void ppu_render(struct Cpu *cpu) {
     
     int total_cycles = 7;
     int frames = 0;
-    int scanlines = 0;
+    int scanlines = 261;
     int ppu_cycle = 0;
     int nametable_addr_latch = 0;
     int nametable_byte_latch = 0;
@@ -381,6 +320,7 @@ void ppu_render(struct Cpu *cpu) {
     while (1) {
         if (cpu_cycles == 0){
             cpu_cycles = cpu_cycle(cpu);
+            ++number;
             if (ppu->oam_dma == 1) {
                 if ((ppu->total_cycles & 1) == 1) {
                     cpu_cycles = (cpu_cycles + 514) * 3;
@@ -392,7 +332,6 @@ void ppu_render(struct Cpu *cpu) {
                 ppu->total_cycles += cpu_cycles;
                 cpu_cycles *= 3;
             }
-            /* } */
         }
         --cpu_cycles;
 
@@ -415,20 +354,13 @@ void ppu_render(struct Cpu *cpu) {
                 
                 continue;
             } else if (ppu_cycle == fetch_nametable) {
-                nametable_addr_latch = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-                nametable_byte_latch = ppu->nametables[nametable_addr_latch];
-                nametable_row = (nametable_addr_latch & 1023) / 32;
-                nametable_column = nametable_addr_latch % 32;
+                nametable_byte_latch = ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)];
                 fetch_nametable += 8;
 
             } else if (ppu_cycle == fetch_attribute) {
                 fetch_attribute += 8;
-                attribute_byte_latch = (nametable_row / 4) * 8 + (nametable_column/4);
-                
-                attribute_byte_latch = ppu->nametables[(nametable_addr_latch < 1024 ? (960 + attribute_byte_latch) : (1984 + attribute_byte_latch))];
-                nametable_row = (nametable_row / 2) % 2;
-                nametable_column = (nametable_column / 2) % 2;
-                attribute_byte_latch  = (attribute_byte_latch >> (((nametable_row << 1) | nametable_column) << 1)) & 3;
+                attribute_byte_latch = ppu->nametables[ ppu->get_mirrored_addr((0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07)) & 0xFFF)];
+                attribute_byte_latch = (attribute_byte_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
 
             } else if (ppu_cycle == fetch_low_bg) {
                 tile_latch = ppu->ptables[((PPUCTRL_BG(ppu->ppu_ctrl) << 12) | (nametable_byte_latch << 4) | (VRAM_FINE_Y(ppu->v)))];
@@ -599,15 +531,8 @@ void ppu_render(struct Cpu *cpu) {
             // clear vblank, sprite hit, and overflow
             low_bg_tiles = 0;
             high_bg_tiles = 0;
-            if (PPUSTATUS_ZEROHIT(ppu->ppu_status)) {
-                /* exit(1); */
-            }
             ppu->ppu_status &= 0b00011111;
         
-            /* y = 0; */
-            /* while (y < 32) { */
-            /*     ppu->oam2[y++] = 0xFF; */
-            /* } */
         } else if (ppu_cycle == 337) {
             ++ppu_cycle;
             continue;
@@ -626,10 +551,10 @@ void ppu_render(struct Cpu *cpu) {
                 fetch_low_bg = 6;
                 fetch_high_bg = 8;
                 pixel_count = 0;
-                SDL_UpdateTexture(texture, NULL, &pixels, 256 * (sizeof(unsigned int)));
+                SDL_UpdateTexture(texture, NULL, pixels, 256 * (sizeof(unsigned int)));
                 SDL_RenderCopy(renderer, texture, NULL, NULL);
                 SDL_RenderPresent(renderer);
-                joypad_events();
+                /* joypad_events(); */
                 continue;
             }
 
@@ -645,26 +570,23 @@ void ppu_render(struct Cpu *cpu) {
             SDL_UpdateTexture(texture, NULL, pixels, pitch);
             SDL_RenderCopy(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
-            joypad_events();
+            /* joypad_events(); */
+
             continue;
         } else if (ppu_cycle == fetch_nametable) {
             fetch_nametable += 8;
             if (ppu_cycle > 320) {
                 // fetch nametable
                 nametable_addr_latch = ppu->get_mirrored_addr(ppu->v & 0xFFF);
-                nametable_byte_latch = ppu->nametables[nametable_addr_latch];
-                nametable_row = (nametable_addr_latch & 1023) / 32;
-                nametable_column = nametable_addr_latch % 32;
+                nametable_byte_latch = ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)];
             }
         } else if (ppu_cycle == fetch_attribute) {
             fetch_attribute += 8;
             if (ppu_cycle > 320) {
                 // fetch attribute
-                attribute_byte_latch = (nametable_row / 4) * 8 + (nametable_column/4);
-                attribute_byte_latch = ppu->nametables[(nametable_addr_latch < 960 ? (960 + attribute_byte_latch) : (1984 + attribute_byte_latch))];
-                nametable_row = (nametable_row / 2) % 2;
-                nametable_column = (nametable_column / 2) % 2;
-                attribute_byte_latch  = (attribute_byte_latch >> (((nametable_row << 1) | nametable_column) << 1)) & 3;
+                attribute_byte_latch = ppu->nametables[ ppu->get_mirrored_addr((0x23C0 | (ppu->v & 0x0C00) | ((ppu->v >> 4) & 0x38) | ((ppu->v >> 2) & 0x07)) & 0xFFF)];
+                /* attribute_byte_latch = ppu->nametables[(nametable_addr_latch < 960 ? (960 + attribute_byte_latch) : (1984 + attribute_byte_latch))]; */
+                attribute_byte_latch = (attribute_byte_latch >> (((AT_Y << 1) | AT_X) << 1)) & 3;
             }
 
         } else if (ppu_cycle == fetch_low_bg) {
