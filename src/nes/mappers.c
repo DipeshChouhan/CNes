@@ -2,13 +2,13 @@
 #include "mappers.h"
 #include "nes.h"
 #include "ppu.h"
+#include "./controllers/controllers.h"
 // TODO: Reading PPUSTATUS will clear vblank flag of PPUSTATUS register [IMP]
 //TODO: Check PPUDATA Read and Write for correctness
     /* Address range	Size	Device */
     /* $0000-$07FF	$0800	2KB internal RAM */
     /* $0800-$0FFF	$0800	Mirrors of $0000-$07FF */
-    /* $1000-$17FF	$0800 */
-    /* $1800-$1FFF	$0800 */
+    /* $1000-$17FF	$0800 */ /* $1800-$1FFF	$0800 */
     /* $2000-$2007	$0008	NES PPU registers */
     /* $2008-$3FFF	$1FF8	Mirrors of $2000-2007 (repeats every 8 bytes) */
     /* $4000-$4017	$0018	NES APU and I/O registers */
@@ -24,13 +24,13 @@
 #define PPUDATA 0x2007
 #define OAMDMA 0x4014
 
+
 #define JOYPAD1 0x4016
 #define JOYPAD2 0x4017
 
 
 unsigned char dynamic_latch = 0;
 
-unsigned char joypad1_read_count = 0;
 
 void common_read(struct Cpu *cpu) {
     if (cpu->address_bus < 0x2000) {
@@ -107,8 +107,10 @@ void common_read(struct Cpu *cpu) {
                 ++joypad1_read_count;
             }
         }
+        return;
     }
     
+    // Apu
 
 }
 
@@ -228,6 +230,7 @@ void common_write(struct Cpu *cpu) {
                 break;
         }
         dynamic_latch = cpu->data_bus;
+        return;
     }
 
     // nes apu and io registers
@@ -251,5 +254,9 @@ void common_write(struct Cpu *cpu) {
         if (cpu->data_bus & 1){
             joypad1_read_count = 0;
         }
+        return;
     }
+
+    // Apu
+    
 }

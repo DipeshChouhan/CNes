@@ -11,8 +11,6 @@
 
 Ppu *ppu;
 SDL_Event event;
-unsigned char joypad1 = 0;
-unsigned char joypad2 = 0;
 Mapper *mapper;
 
 int cpu_oamdma_addr = 0;

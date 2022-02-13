@@ -194,70 +194,6 @@ void evaluate_sprites(int scanline, int oam_addr) {
     /* printf("eval total_sprites - %d\n", ppu->total_sprites); */
 }
 
-
-void joypad_events() {
-    while(SDL_PollEvent(&event)) {
-        if (event.type == SDL_KEYDOWN) {
-            switch(event.key.keysym.sym) {
-                case SDLK_d:
-                    JOYPAD_SET(joypad1, BUTTON_A);
-                    break;
-                case SDLK_f:
-                    JOYPAD_SET(joypad1, BUTTON_B);
-                    break;
-                case SDLK_RETURN:
-                    JOYPAD_SET(joypad1, BUTTON_START);
-                    break;
-                case SDLK_SPACE:
-                    JOYPAD_SET(joypad1, BUTTON_SELECT);
-                    break;
-                case SDLK_DOWN:
-                    JOYPAD_SET(joypad1, BUTTON_DOWN);
-                    break;
-                case SDLK_UP:
-                    JOYPAD_SET(joypad1, BUTTON_UP);
-                    break;
-                case SDLK_LEFT:
-                    JOYPAD_SET(joypad1, BUTTON_LEFT);
-                    break;
-                case SDLK_RIGHT:
-                    JOYPAD_SET(joypad1, BUTTON_RIGHT);
-                    break;
-            }
-        } else if(event.type == SDL_KEYUP) {
-
-            switch(event.key.keysym.sym) {
-                case SDLK_d:
-                    JOYPAD_CLEAR(joypad1, BUTTON_A);
-                    break;
-                case SDLK_f:
-                    JOYPAD_CLEAR(joypad1, BUTTON_B);
-                    break;
-                case SDLK_RETURN:
-                    JOYPAD_CLEAR(joypad1, BUTTON_START);
-                    break;
-                case SDLK_SPACE:
-                    JOYPAD_CLEAR(joypad1, BUTTON_SELECT);
-                    break;
-                case SDLK_DOWN:
-                    JOYPAD_CLEAR(joypad1, BUTTON_DOWN);
-                    break;
-                case SDLK_UP:
-                    JOYPAD_CLEAR(joypad1, BUTTON_UP);
-                    break;
-                case SDLK_LEFT:
-                    JOYPAD_CLEAR(joypad1, BUTTON_LEFT);
-                    break;
-                case SDLK_RIGHT:
-                    JOYPAD_CLEAR(joypad1, BUTTON_RIGHT);
-                    break;
-            }
-        } else if (event.type == SDL_QUIT) {
-            SDL_Quit();
-            exit(0);
-        }
-    }
-}
 int render_sprites(unsigned char *pixels) {
     /* printf("total_sprites - %d\n", ppu->total_sprites); */
     int x;
@@ -618,7 +554,7 @@ void ppu_render(struct Cpu *cpu) {
                 SDL_UpdateTexture(texture, NULL, pixels, 256 * (sizeof(unsigned int)));
                 SDL_RenderCopy(renderer, texture, NULL, NULL);
                 SDL_RenderPresent(renderer);
-                joypad_events();
+                /* joypad_events(); */
                 continue;
             }
 
@@ -634,7 +570,7 @@ void ppu_render(struct Cpu *cpu) {
             SDL_UpdateTexture(texture, NULL, pixels, pitch);
             SDL_RenderCopy(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
-            joypad_events();
+            /* joypad_events(); */
 
             continue;
         } else if (ppu_cycle == fetch_nametable) {

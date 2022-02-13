@@ -1,4 +1,3 @@
-
 #include "../mos_6502/cpu_impl.h"
 #include "ppu.h"
 #include "nes.h"
@@ -9,6 +8,7 @@
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_timer.h>
 #include <SDL2/SDL_video.h>
+#include "controllers/controllers.h"
 
 #define HORIZONTAL_V 0b1111101111100000
 #define VERTICAL_V   0b1000010000011111
@@ -98,69 +98,7 @@ void print_sprites_x(int *latch) {
     
     printf("\n___________________________________\n");
 }
-void joypad_events() {
-    while(SDL_PollEvent(&event)) {
-        if (event.type == SDL_KEYDOWN) {
-            switch(event.key.keysym.sym) {
-                case SDLK_d:
-                    JOYPAD_SET(joypad1, BUTTON_A);
-                    break;
-                case SDLK_f:
-                    JOYPAD_SET(joypad1, BUTTON_B);
-                    break;
-                case SDLK_RETURN:
-                    JOYPAD_SET(joypad1, BUTTON_START);
-                    break;
-                case SDLK_SPACE:
-                    JOYPAD_SET(joypad1, BUTTON_SELECT);
-                    break;
-                case SDLK_DOWN:
-                    JOYPAD_SET(joypad1, BUTTON_DOWN);
-                    break;
-                case SDLK_UP:
-                    JOYPAD_SET(joypad1, BUTTON_UP);
-                    break;
-                case SDLK_LEFT:
-                    JOYPAD_SET(joypad1, BUTTON_LEFT);
-                    break;
-                case SDLK_RIGHT:
-                    JOYPAD_SET(joypad1, BUTTON_RIGHT);
-                    break;
-            }
-        } else if(event.type == SDL_KEYUP) {
 
-            switch(event.key.keysym.sym) {
-                case SDLK_d:
-                    JOYPAD_CLEAR(joypad1, BUTTON_A);
-                    break;
-                case SDLK_f:
-                    JOYPAD_CLEAR(joypad1, BUTTON_B);
-                    break;
-                case SDLK_RETURN:
-                    JOYPAD_CLEAR(joypad1, BUTTON_START);
-                    break;
-                case SDLK_SPACE:
-                    JOYPAD_CLEAR(joypad1, BUTTON_SELECT);
-                    break;
-                case SDLK_DOWN:
-                    JOYPAD_CLEAR(joypad1, BUTTON_DOWN);
-                    break;
-                case SDLK_UP:
-                    JOYPAD_CLEAR(joypad1, BUTTON_UP);
-                    break;
-                case SDLK_LEFT:
-                    JOYPAD_CLEAR(joypad1, BUTTON_LEFT);
-                    break;
-                case SDLK_RIGHT:
-                    JOYPAD_CLEAR(joypad1, BUTTON_RIGHT);
-                    break;
-            }
-        } else if (event.type == SDL_QUIT) {
-            SDL_Quit();
-            exit(0);
-        }
-    }
-}
 int vertical_mirroring(int addr) {
     if (addr < 0x400) {
         return addr;
@@ -535,32 +473,27 @@ SPRITE_FETCH:
                     sprites_x[sprites_to_render] = ppu->oam2[oam_count + 3] + 1;
                     sprites_attrs[sprites_to_render] = ppu->oam2[oam_count + 2];
                     sprite_flip = sprites_attrs[sprites_to_render] & 0x80;
-                    /* addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | (ppu->oam2[oam_count + 1] << 4) | */
-                    /*     (sprite_flip ? (7 - ppu->oam2[oam_count]) : ppu->oam2[oam_count]); */
-                    /* if (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl)) { */
-                    /*     addr_latch = ((ppu->oam2[oam_count + 1] & 1) << 12) | */ 
-                    /*         (((ppu->oam2[oam_count + 1] & 0b11111110) | */ 
-                    /*           (ppu->oam2[oam_count] >> 3)) << 4) | */ 
-                    /*         (sprite_flip ? (7 - ppu->oam2[oam_count] & 7) : */ 
-                    /*          (ppu->oam2[oam_count] & 7)); */
-                    /* } else { */
-                    /*     addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | */ 
-                    /*         (ppu->oam2[oam_count + 1] << 4) | */
-                    /*         (sprite_flip ? (7 - ppu->oam2[oam_count]) : ppu->oam2[oam_count]); */
-
-                    /* } */
                     if (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl)) {
-                        addr_latch = ((ppu->oam2[oam_count + 1] & 1) * 0x1000) + 
-                            ((ppu->oam2[oam_count + 1] & ~1) * 16);
+                        addr_latch = ((ppu->oam2[oam_count + 1] & 1) << 12) | 
+                            ((ppu->oam2[oam_count + 1] & 0b11111110) << 4);
+
+                        if (sprite_flip) {
+                            if (ppu->oam2[oam_count + 1] & 1) {
+                                // tile is odd
+                                addr_latch = addr_latch | ((ppu->oam2[oam_count] & 8) << 1);
+                            } else {
+                                // tile is even and flipped
+                                addr_latch = addr_latch | (((ppu->oam2[oam_count] ^ 8) & 8) << 1);
+                            }
+                            addr_latch = addr_latch | (7 - ppu->oam2[oam_count] & 7);
+                        } else {
+                            addr_latch = addr_latch | ((ppu->oam2[oam_count] & 8) << 1) | (ppu->oam2[oam_count] & 7);
+                        }
                     } else {
-                        addr_latch = (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl) * 0x1000) +
-                            (ppu->oam2[oam_count + 1] * 16);
+                        addr_latch = (PPUCTRL_SPRITE(ppu->ppu_ctrl) << 12) | 
+                            (ppu->oam2[oam_count + 1] << 4) |
+                            (sprite_flip ? (7 - ppu->oam2[oam_count]) : ppu->oam2[oam_count]);
                     }
-                    temp = ppu->oam2[oam_count];
-                    if (sprite_flip) {
-                        temp ^= (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl)) ? 15 : 7;
-                    }
-                    addr_latch += temp + (temp & 8);
                     break;
 
                 case 6:
@@ -651,6 +584,7 @@ PRE_RENDER_SCANLINE:
         // clear vblank sprite and overflow
         ppu->ppu_status &= 0b00011111;
         sprite_zero_current = 0;
+        sprites_to_render = 0;
         sprite_zero_next = 1;
         ++ppu_cycle;
         goto PRE_RENDER_SCANLINE;
@@ -674,7 +608,6 @@ PRE_RENDER_SCANLINE:
 
 
     // horizontal (v) = horizontal(t)
-    /* sprites_to_render = 0; */
     if(RENDERING_ENABLED(ppu->ppu_mask)) {
         ppu->v = (ppu->v & HORIZONTAL_V) | (ppu->t & VERTICAL_V);
     }
@@ -735,7 +668,7 @@ PRE_TWO_TILES:
             SDL_UpdateTexture(texture, NULL, pixels, pitch);
             SDL_RenderCopy(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
-            joypad_events();
+            joypad1_events();
             // render
             goto VISIBLE_SCANLINES;
         }
@@ -749,7 +682,7 @@ PRE_TWO_TILES:
         SDL_UpdateTexture(texture, NULL, pixels, pitch);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
-        joypad_events();
+        joypad1_events();
         // render
         goto VISIBLE_SCANLINES;
     }
