@@ -31,6 +31,37 @@
 
 unsigned char dynamic_latch = 0;
 
+int vertical_mirroring(int addr) {
+    if (addr < 0x400) {
+        return addr;
+    }
+    if (addr < 0x800) {
+        return (addr & 0x3FF) + 0x400;
+    }
+    if (addr < 0xC00) {
+        return addr & 0x3FF;
+    }
+
+    // addr < 0x1000
+    return (addr & 0x3FF) + 0x400;
+}
+
+int horizontal_mirroring(int addr) {
+    if (addr < 0x800) {
+        return addr & 0x3FF;
+    }
+
+    return (addr & 0x3FF) + 0x400;
+}
+
+int one_screen_low_mirroring(int addr) {
+    return addr & 0x3FF;
+}
+
+int one_screen_upper_mirroring(int addr) {
+    return (addr & 0x3FF) + 0x400;
+}
+
 
 void common_read(struct Cpu *cpu) {
     if (cpu->address_bus < 0x2000) {
@@ -65,7 +96,7 @@ void common_read(struct Cpu *cpu) {
                 // TODO: During rendering it increments coarse X and Y simultaniously
                 // PPUDATA      // read/write
                 if ((ppu->v & 0x3FFF) < 0x3000) {
-                    mapper->vram_read(cpu);
+                    mapper->vram_read(cpu, ppu->v & 0x3FFF);
                 } else if ((ppu->v & 0x3FFF) > 0x3EFF) {
                     unsigned char temp = (ppu->v & 0x1F);
                     if (temp > 0x0F && (temp % 4) == 0) {
@@ -76,8 +107,7 @@ void common_read(struct Cpu *cpu) {
                     ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr(ppu->v - 0x1000)];
 
                 } else {
-                    printf("Reading at $%d not accesseble.\n", ppu->v);
-                    exit(1);
+                    mapper->vram_read(cpu, ppu->v & 0x3FFF); // address 0x3000 - 0x3EFF mirrors of 0x2000 - 0x2EFF
                 }
                 ppu->v += (PPUCTRL_VINC(ppu->ppu_ctrl)) * 31 + 1;
                 break;
@@ -212,7 +242,7 @@ void common_write(struct Cpu *cpu) {
                 // PPUDATA      // read/write
                 // TODO: Mirroring
                 if ((ppu->v & 0x3FFF) < 0x3000) {
-                    mapper->vram_write(cpu);
+                    mapper->vram_write(cpu, ppu->v & 0x3FFF);
                 } else if ((ppu->v & 0x3FFF) > 0x3EFF) {
 
                     unsigned char temp = (ppu->v & 0x1F);
@@ -221,8 +251,7 @@ void common_write(struct Cpu *cpu) {
                     }
                     ppu->palette[temp] = cpu->data_bus;
                 } else {
-                    printf("Writing at $%d not accesseble.\n", ppu->v);
-                    exit(1);
+                    mapper->vram_write(cpu, ppu->v & 0x3FFF);    // 0x3000 - 0x3EFF mirrors of 0x2000 - 0x3EFF
                 }
 
                 ppu->v += (PPUCTRL_VINC(ppu->ppu_ctrl)) * 31 + 1;

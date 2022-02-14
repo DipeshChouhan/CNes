@@ -11,7 +11,7 @@ void uxrom_read(struct Cpu *cpu) {
         cpu->data_bus = cpu->mem[cpu->address_bus];
     } else if (cpu->address_bus > 0x7FFF) {
         // switchable bank
-        if (mapper->registers[0]  == 7) {
+        if (mapper->registers[0]  == mapper->prg_rom_size) {
             cpu->data_bus = cpu->mem[cpu->address_bus + 0x4000];
             return;
         }
@@ -27,31 +27,31 @@ void uxrom_write(struct Cpu *cpu) {
     }
 
     if (cpu->address_bus > 0x7FFF) {
-        mapper->registers[0] = cpu->data_bus & 7;
+        mapper->registers[0] = cpu->data_bus & mapper->registers[1];
         return;
     }
     printf("uxrom_write to 0x%X\n", cpu->address_bus);
     /* exit(1); */
 }
 
-void uxrom_vram_read(struct Cpu *cpu) {
+void uxrom_vram_read(struct Cpu *cpu, int vram_addr) {
 
-    if ((ppu->v & 0x3FFF) < 0x2000) {
+    if (vram_addr < 0x2000) {
         cpu->data_bus = ppu->read_buffer;
-        ppu->read_buffer = ppu->ptables[ppu->v & 0x3FFF];
+        ppu->read_buffer = ppu->ptables[vram_addr];
         return;
     }
     cpu->data_bus = ppu->read_buffer;
     // TODO: Four screen mirroring
-    ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)];
+    ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr(vram_addr & 0xFFF)];
 }
 
-void uxrom_vram_write(struct Cpu *cpu) {
+void uxrom_vram_write(struct Cpu *cpu, int vram_addr) {
 
-    if ((ppu->v & 0x3FFF) < 0x2000) {
+    if (vram_addr < 0x2000) {
         /* printf("write\n"); */
-        ppu->ptables[ppu->v & 0x3FFF] = cpu->data_bus;
+        ppu->ptables[vram_addr] = cpu->data_bus;
         return;
     }
-    ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)] = cpu->data_bus;
+    ppu->nametables[ppu->get_mirrored_addr(vram_addr & 0xFFF)] = cpu->data_bus;
 }

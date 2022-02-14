@@ -34,9 +34,9 @@ void nrom_write(struct Cpu *cpu) {
     exit(1);
 }
 
-void nrom_vram_read(struct Cpu *cpu) {
+void nrom_vram_read(struct Cpu *cpu, int vram_addr) {
 
-    if ((ppu->v & 0x3FFF) < 0x2000) {
+    if (vram_addr < 0x2000) {
         cpu->data_bus = ppu->read_buffer;
         ppu->read_buffer = ppu->ptables[ppu->v & 0x3FFF];
         return;
@@ -46,9 +46,9 @@ void nrom_vram_read(struct Cpu *cpu) {
     ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)];
 }
 
-void nrom_vram_write(struct Cpu *cpu) {
+void nrom_vram_write(struct Cpu *cpu, int vram_addr) {
 
-    if ((ppu->v & 0x3FFF) < 0x2000) {
+    if (vram_addr < 0x2000) {
         ppu->ptables[ppu->v & 0x3FFF] = cpu->data_bus;
         return;
     }

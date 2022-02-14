@@ -13,6 +13,7 @@
 #define HORIZONTAL_V 0b1111101111100000
 #define VERTICAL_V   0b1000010000011111
 
+// copied from nesdev.org
 #define INC_HORIZONTAL_V(_v)                    \
     if ((_v & 0x001F) == 31){                   \
         _v &= ~0x001F;                          \
@@ -21,6 +22,7 @@
         _v += 1;                                \
     }                                           \
 
+// copied from nesdev.org
 #define INC_VERTICAL_V(_v)                      \
     if ((_v & 0x7000) != 0x7000){               \
         _v += 0x1000;                           \
@@ -99,28 +101,6 @@ void print_sprites_x(int *latch) {
     printf("\n___________________________________\n");
 }
 
-int vertical_mirroring(int addr) {
-    if (addr < 0x400) {
-        return addr;
-    }
-    if (addr < 0x800) {
-        return (addr & 0x3FF) + 0x400;
-    }
-    if (addr < 0xC00) {
-        return addr & 0x3FF;
-    }
-
-    // addr < 0x1000
-    return (addr & 0x3FF) + 0x400;
-}
-
-int horizontal_mirroring(int addr) {
-    if (addr < 0x800) {
-        return addr & 0x3FF;
-    }
-
-    return (addr & 0x3FF) + 0x400;
-}
 
 
 #define LOAD_BG_REGISTERS(_bg_latch)                    \
@@ -130,12 +110,10 @@ int horizontal_mirroring(int addr) {
     at_high = at_high | ((at_latch & 2) ? 0xFF : 0x00); \
 
 #define UPDATE_BG_REGISTERS()   \
-    if (PPUMASK_BG_SHOW(ppu->ppu_mask)) {   \
         bg_low <<= 1;               \
         bg_high <<= 1;              \
         at_low <<= 1;               \
         at_high <<= 1;              \
-    }                               \
 
 
 #define BACKGROUND_TILES()                                                          \
@@ -363,10 +341,8 @@ VISIBLE_SCANLINES:
                             check_sprite_zero_hit = 1;
                         }
                     }
-                    if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask)) {
                         sprites_low[temp] >>= 1;
                         sprites_high[temp] >>= 1;
-                    }
 
                 } else {
 
@@ -379,11 +355,9 @@ VISIBLE_SCANLINES:
                             check_sprite_zero_hit = 1;
                         }
                     }
-                    if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask)){
 
                         sprites_low[temp] <<= 1;
                         sprites_high[temp] <<= 1;
-                    }
                 }
             } else {
                 if (PPUMASK_SPRITE_SHOW(ppu->ppu_mask)) {
@@ -653,7 +627,7 @@ PRE_TWO_TILES:
     }
 
     if (ppu_cycle == 339) {
-        if (PPUMASK_BG_SHOW(ppu->ppu_mask) && (frames & 1)) {
+        if (RENDERING_ENABLED(ppu->ppu_mask) && (frames & 1)) {
             scanline = 0;
             ppu_cycle = 0;
             ++frames;

@@ -1,3 +1,4 @@
+// TODO: Remove Cpu memory [...NOT DONE]
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,8 +48,13 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
     int mirroring = flag6 & 1;
     int mapper_type = (flag7 & 0xf0) | (flag6 >> 4);
     int trainer = (flag6 >> 2) & 1;
-    int have_prg_ram = (flag6 >> 1) & 1;
+    mapper->have_prg_ram = (flag6 >> 1) & 1;
     int four_screen_mirroring = (flag6 >> 3) & 1;
+
+    if ((flag7 & 0b00001100) == 0b00001000) {
+        printf("Rom is in NES2.0 fromat. Not Supported\n");
+        exit(1);
+    }
 
     if (!four_screen_mirroring) {
         if (flag6 & 1) {
@@ -58,15 +64,14 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
         }
     } else {
         // TODO: provide four screen mirroring
+        printf("Game using four screen mirroring\n");
+        exit(1);
     }
 
     printf("mapper = %d, mirroring = %d, trainer = %d, prg_rom = %d, chr_rom = %d, prg_ram = %d\n",
-            mapper_type, mirroring, trainer, prg_rom_size*0x4000, chr_rom_size * 0x2000, have_prg_ram);
+            mapper_type, mirroring, trainer, prg_rom_size*0x4000, chr_rom_size * 0x2000, mapper->have_prg_ram);
 
     int count = 16;
-    if (mapper_type == 66) {
-        mapper_type = 2;
-    }
 
     switch (mapper_type) {
         // mapper nrom
@@ -101,18 +106,65 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
                 printf("Rom is using CHR RAM.\n");
                 /* exit(1); */
             }
+            mapper->free_chr_banks = 0;
+            mapper->free_prg_banks = 0;
             cpu->cpu_read = nrom_read;
             cpu->cpu_write = nrom_write;
             mapper->vram_read = nrom_vram_read;
             mapper->vram_write = nrom_vram_write;
             break;
 
+        case 1:
+            // MMC1
+            printf("MMC1 mapper\n");
+            if (prg_rom_size < 1) {
+                printf("PRG ROM is not available\n");
+                exit(1);
+            }
+
+            mapper->free_prg_banks = 1;
+            mapper->prg_banks = malloc(0x4000 * prg_rom_size);
+            memcpy(mapper->prg_banks, data + count, 0x4000 * prg_rom_size);
+            count += 0x4000 * prg_rom_size;
+            --prg_rom_size;
+            mapper->prg_rom_size = prg_rom_size;
+            
+            if (chr_rom_size == 1) {
+                // 8kb chr rom bank
+                memcpy(&(ppu->ptables), data + count, 0x2000);
+                mapper->free_chr_banks = 0;
+                
+            } else if (chr_rom_size > 1) {
+                mapper->chr_banks = malloc(0x2000 * chr_rom_size);
+                memcpy(mapper->chr_banks, data + count, 0x2000 * chr_rom_size);
+                mapper->free_chr_banks = 1;
+                --chr_rom_size;
+            } else {
+                printf("Game is using CHR Ram\n");
+                mapper->free_chr_banks = 0;
+            }
+            mapper->chr_rom_size = chr_rom_size;
+            cpu->cpu_read = mmc1_read;
+            cpu->cpu_write = mmc1_write;
+            mapper->vram_read = mmc1_vram_read;
+            mapper->vram_write = mmc1_vram_write;
+            mapper->registers[0] = 0;  // reset temprory register
+            mapper->registers[1] = 0;   // write counter
+            mapper->registers[6] = 3;   // fix last bank at 0xC000
+            break;
+
         case 2:
             // uxROM
-            printf("uxROM mapper\n");
-            mapper->prg_banks = malloc(0x4000 * 7);
-            memcpy(mapper->prg_banks, data + count, 0x4000 * 7);
-            count += 0x4000 * 7;
+            printf("UXROM mapper\n");
+            --prg_rom_size;
+            mapper->prg_rom_size = prg_rom_size;
+            mapper->free_chr_banks = 0;
+            mapper->free_prg_banks = 1;   // prg rom banks allocated
+            // UNROM 7 and UOROM 15
+            mapper->registers[1] = (prg_rom_size > 7) ? 15 : 7;
+            mapper->prg_banks = malloc(0x4000 * prg_rom_size);
+            memcpy(mapper->prg_banks, data + count, 0x4000 * prg_rom_size);
+            count += 0x4000 * prg_rom_size;
             memcpy(&(cpu->mem[0xC000]), data + count, 0x4000);
             cpu->cpu_read = uxrom_read;
             cpu->cpu_write = uxrom_write;
@@ -145,10 +197,15 @@ void power_on_nes(char *game_file) {
     ppu = &p;
     Mapper m;
     mapper = &m;
-    mapper->registers[0] = 0;
     loadMapper(game_file, &cpu);
     power_on(&cpu);
     ppu_render(&cpu);
-    free(mapper->prg_banks);
+    if (mapper->free_prg_banks == 1) {
+        free(mapper->prg_banks);
+    }
+
+    if (mapper->free_chr_banks) {
+        free(mapper->chr_banks);
+    }
 }
 
