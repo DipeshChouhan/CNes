@@ -1,6 +1,7 @@
 #include "../mos_6502/cpu_impl.h"
 #include "ppu.h"
 #include "nes.h"
+#include "mappers.h"
 #include <stdio.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
@@ -103,6 +104,7 @@ void print_sprites_x(int *latch) {
 
 
 
+
 #define LOAD_BG_REGISTERS(_bg_latch)                    \
     bg_low = bg_low | (_bg_latch & 0xFF);               \
     bg_high = bg_high | ((_bg_latch >> 8) & 0xFF);      \
@@ -137,13 +139,13 @@ void print_sprites_x(int *latch) {
                     VRAM_FINE_Y(ppu->v);                                            \
                 break;                                                              \
             case 6:                                                                 \
-                bg_latch = ppu->ptables[addr_latch];                                \
+                bg_latch = mapper->chr_read(addr_latch);                            \
                 break;                                                              \
             case 7:                                                                 \
                 addr_latch |= 8;                                                    \
                 break;                                                              \
             case 0:                                                                 \
-                bg_latch |= (ppu->ptables[addr_latch] << 8);                        \
+                bg_latch |= (mapper->chr_read(addr_latch) << 8);                    \
                 if (RENDERING_ENABLED(ppu->ppu_mask)) {                             \
                     INC_HORIZONTAL_V(ppu->v);                                       \
                     if (ppu_cycle == 256) {                                         \
@@ -174,13 +176,13 @@ void print_sprites_x(int *latch) {
                     VRAM_FINE_Y(ppu->v);                                            \
                 break;                                                              \
             case 6:                                                                 \
-                bg_latch = ppu->ptables[addr_latch];                                \
+                bg_latch = mapper->chr_read(addr_latch);                            \
                 break;                                                              \
             case 7:                                                                 \
                 addr_latch |= 8;                                                    \
                 break;                                                              \
             case 0:                                                                 \
-                bg_latch |= (ppu->ptables[addr_latch] << 8);                        \
+                bg_latch |= (mapper->chr_read(addr_latch) << 8);                    \
                 if (RENDERING_ENABLED(ppu->ppu_mask)) {                             \
                     INC_HORIZONTAL_V(ppu->v);                                       \
                 }                                                                   \
@@ -292,7 +294,7 @@ VISIBLE_SCANLINES:
             if (ppu_cycle & 1) {
                 // cycle is odd
                 if (ppu_cycle == 65) {
-                    oam_count = cpu->mem[0x2003];   // evaluation starts at this oam address(sprite zero) 
+                    oam_count = ppu->oam_addr;   // evaluation starts at this oam address(sprite zero) 
                 }
                 oam_data = ppu->oam[oam_count];
             } else {
@@ -431,14 +433,14 @@ VISIBLE_SCANLINES:
     ++ppu_cycle;
     oam_count = 0;
     sprites_to_render = 0;
-    cpu->mem[0x2003] = 0;
+    ppu->oam_addr = 0;
 
 SPRITE_FETCH:
     CPU_CYCLE(cpu);
     --cycles;
 
     if (ppu_cycle < 321) {
-        cpu->mem[0x2003] = 0;
+        ppu->oam_addr = 0;
         // 8x8 sprites only
         if (sprites_to_render < ppu->total_sprites) {
             switch(ppu_cycle % 8) {
@@ -465,7 +467,7 @@ SPRITE_FETCH:
 
                 case 6:
                     // low sprite tile byte
-                    sprites_low[sprites_to_render] = ppu->ptables[addr_latch];
+                    sprites_low[sprites_to_render] = mapper->chr_read(addr_latch);
                     break;
 
                 case 7:
@@ -475,7 +477,7 @@ SPRITE_FETCH:
 
                 case 0:
                     // high sprite tile byte
-                    sprites_high[sprites_to_render] = ppu->ptables[addr_latch];
+                    sprites_high[sprites_to_render] = mapper->chr_read(addr_latch);
                     ++sprites_to_render;
                     oam_count += 4;
                     break;
@@ -581,7 +583,7 @@ PRE_RENDER_SCANLINE:
     ++ppu_cycle;
 
     temp = 0b000000000100000;
-    cpu->mem[0x2003] = 0;
+    ppu->oam_addr = 0;
 
 PRE_SPRITE_FETCH:
     CPU_CYCLE(cpu);
@@ -589,7 +591,7 @@ PRE_SPRITE_FETCH:
 
     
     if (ppu_cycle < 321) {
-        cpu->mem[0x2003] = 0;
+        ppu->oam_addr = 0;
         // REMINDER: If any error occur check this for correctness.
         if (ppu_cycle >= 285 && ppu_cycle <= 304) {
             // copy vertical(v) = vertical(t)

@@ -9,11 +9,6 @@ void nrom_read(struct Cpu *cpu) {
         return;
     }
 
-    /* if (cpu->address_bus < 0xC000) { */
-    /*     printf("error\n"); */
-    /*     exit(1); */
-    /* } */
-
     if (cpu->address_bus > 0x7FFF) {
         cpu->data_bus = cpu->mem[cpu->address_bus];
         return;
@@ -34,25 +29,10 @@ void nrom_write(struct Cpu *cpu) {
     exit(1);
 }
 
-void nrom_vram_read(struct Cpu *cpu, int vram_addr) {
-
-    if (vram_addr < 0x2000) {
-        cpu->data_bus = ppu->read_buffer;
-        ppu->read_buffer = ppu->ptables[ppu->v & 0x3FFF];
-        return;
-    }
-    cpu->data_bus = ppu->read_buffer;
-    // TODO: Four screen mirroring
-    ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)];
+int nrom_chr_read(int vram_addr) {
+    return ppu->ptables[vram_addr];
 }
 
-void nrom_vram_write(struct Cpu *cpu, int vram_addr) {
-
-    if (vram_addr < 0x2000) {
-        ppu->ptables[ppu->v & 0x3FFF] = cpu->data_bus;
-        return;
-    }
-
-    ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)] = cpu->data_bus;
-
+void nrom_chr_write(unsigned char data, int vram_addr) {
+    ppu->ptables[vram_addr] = data;
 }

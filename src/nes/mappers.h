@@ -14,8 +14,8 @@ typedef struct {
     unsigned char have_prg_ram;
     unsigned char chr_rom_size;
     unsigned char registers[8]; // enough for majority of mappers
-    void (*vram_read)(struct Cpu *cpu, int vram_add);
-    void (*vram_write)(struct Cpu *cpu, int vram_addr);
+    int (*chr_read)(int vram_add);
+    void (*chr_write)(unsigned char data, int vram_addr);
 } Mapper;
 
 int vertical_mirroring(int addr);
@@ -29,18 +29,23 @@ void common_write(struct Cpu *cpu);
 
 void nrom_read(struct Cpu *cpu);
 void nrom_write(struct Cpu *cpu);
-void nrom_vram_read(struct Cpu *cpu, int vram_addr);
-void nrom_vram_write(struct Cpu *cpu, int vram_addr);
+int nrom_chr_read(int vram_addr);
+void nrom_chr_write(unsigned char data, int vram_addr);
 
 void uxrom_read(struct Cpu *cpu);
 void uxrom_write(struct Cpu *cpu);
-void uxrom_vram_write(struct Cpu *cpu, int vram_addr);
-void uxrom_vram_read(struct Cpu *cpu, int vram_addr);
+int uxrom_chr_read(int vram_addr);
+void uxrom_chr_write(unsigned char data, int vram_addr);
 
 void mmc1_read(struct Cpu *cpu);
 void mmc1_write(struct Cpu *cpu);
-void mmc1_vram_read(struct Cpu *cpu, int vram_addr);
-void mmc1_vram_write(struct Cpu *cpu, int vram_addr);
+int mmc1_chr_read(int vram_addr);
+void mmc1_chr_write(unsigned char data, int vram_addr);
+
+void gxrom_read(struct Cpu *cpu);
+void gxrom_write(struct Cpu *cpu);
+int gxrom_chr_read(int vram_addr);
+void gxrom_chr_write(unsigned char data, int vram_addr);
 
 extern Mapper *mapper;
 

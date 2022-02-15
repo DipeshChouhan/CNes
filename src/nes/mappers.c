@@ -84,19 +84,23 @@ void common_read(struct Cpu *cpu) {
                 break;
             case OAMDATA:
                 // OAMDATA     // read/write
-                cpu->data_bus = ppu->oam[cpu->mem[OAMADDR]];
+                cpu->data_bus = ppu->oam[ppu->oam_addr];
                     // not in vblank or forced blanking
 
                 if (PPUSTATUS_VBLANK(ppu->ppu_status) || !RENDERING_ENABLED(ppu->ppu_mask)) {
                     break;
                 }
-                ++cpu->mem[OAMADDR]; // increment OAMADDR
+                ++ppu->oam_addr; // increment OAMADDR
                 break;
             case PPUDATA:
                 // TODO: During rendering it increments coarse X and Y simultaniously
                 // PPUDATA      // read/write
-                if ((ppu->v & 0x3FFF) < 0x3000) {
-                    mapper->vram_read(cpu, ppu->v & 0x3FFF);
+                if ((ppu->v & 0x3FFF) < 0x2000) {
+                    cpu->data_bus = ppu->read_buffer;
+                    ppu->read_buffer = mapper->chr_read(ppu->v & 0x3FFF);
+                } else if ((ppu->v & 0x3FFF) < 0x3000) {
+                    cpu->data_bus = ppu->read_buffer;
+                    ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)];
                 } else if ((ppu->v & 0x3FFF) > 0x3EFF) {
                     unsigned char temp = (ppu->v & 0x1F);
                     if (temp > 0x0F && (temp % 4) == 0) {
@@ -104,10 +108,11 @@ void common_read(struct Cpu *cpu) {
                     }
                     cpu->data_bus = ppu->palette[temp];
 
-                    ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr(ppu->v - 0x1000)];
+                    ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr((ppu->v - 0x1000) & 0xFFF)];
 
                 } else {
-                    mapper->vram_read(cpu, ppu->v & 0x3FFF); // address 0x3000 - 0x3EFF mirrors of 0x2000 - 0x2EFF
+                    cpu->data_bus = ppu->read_buffer;
+                    ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr(ppu->v  & 0xFFF)];// address 0x3000 - 0x3EFF mirrors of 0x2000 - 0x2EFF
                 }
                 ppu->v += (PPUCTRL_VINC(ppu->ppu_ctrl)) * 31 + 1;
                 break;
@@ -187,7 +192,7 @@ void common_write(struct Cpu *cpu) {
                 break;
             case OAMADDR:
                 // OAMADDR      // write
-                cpu->mem[OAMADDR] = cpu->data_bus;
+                ppu->oam_addr = cpu->data_bus;
                 break;
             case OAMDATA:
                 // OAMDATA      // read/write
@@ -199,9 +204,9 @@ void common_write(struct Cpu *cpu) {
                 // but do perform a glitchy increment of OAMADDR
                 // best practice to ignore writes to oamdata during rendering
                 if (PPUSTATUS_VBLANK(ppu->ppu_status) || !RENDERING_ENABLED(ppu->ppu_mask)) {
-                    ppu->oam[cpu->mem[OAMADDR]] = cpu->data_bus;
+                    ppu->oam[ppu->oam_addr] = cpu->data_bus;
                 }
-                ++cpu->mem[OAMADDR];
+                ++ppu->oam_addr;
                 break;
             case PPUSCROLL:
                 // PPUSCROLL    // write x2
@@ -241,8 +246,10 @@ void common_write(struct Cpu *cpu) {
             case PPUDATA:
                 // PPUDATA      // read/write
                 // TODO: Mirroring
-                if ((ppu->v & 0x3FFF) < 0x3000) {
-                    mapper->vram_write(cpu, ppu->v & 0x3FFF);
+                if ((ppu->v & 0x3FFF) < 0x2000) {
+                    mapper->chr_write(cpu->data_bus, ppu->v & 0x3FFF);
+                } else if ((ppu->v & 0x3FFF) < 0x3000) {
+                    ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)] = cpu->data_bus;
                 } else if ((ppu->v & 0x3FFF) > 0x3EFF) {
 
                     unsigned char temp = (ppu->v & 0x1F);
@@ -251,7 +258,8 @@ void common_write(struct Cpu *cpu) {
                     }
                     ppu->palette[temp] = cpu->data_bus;
                 } else {
-                    mapper->vram_write(cpu, ppu->v & 0x3FFF);    // 0x3000 - 0x3EFF mirrors of 0x2000 - 0x3EFF
+                    /* mapper->vram_write(cpu, ppu->v & 0x3FFF);    // 0x3000 - 0x3EFF mirrors of 0x2000 - 0x3EFF */
+                    ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)] = cpu->data_bus;
                 }
 
                 ppu->v += (PPUCTRL_VINC(ppu->ppu_ctrl)) * 31 + 1;
@@ -268,7 +276,7 @@ void common_write(struct Cpu *cpu) {
         /* int addr = cpu->data_bus << 8; */
         /* int oam_addr = cpu->mem[OAMADDR]; */
         cpu_oamdma_addr = cpu->data_bus << 8;
-        oamdma_addr = cpu->mem[OAMADDR];
+        oamdma_addr = ppu->oam_addr;
         ppu->oam_dma = 1;
 
         /* for (int i = 0; i < 256; i++) { */

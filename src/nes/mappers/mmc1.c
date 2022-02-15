@@ -144,23 +144,31 @@ void mmc1_write(struct Cpu *cpu) {
 
                         mapper->registers[CHR_ROM_BANK_MODE] = 
                             (mapper->registers[SHIFT_REGISTER] >> 4);
+                        
+
 
                         break;
 
                     case 0x2000:
                         // CHR bank 0
                         mapper->registers[CHR_BANK_0] = mapper->registers[SHIFT_REGISTER];
+                        if (mapper->chr_rom_size < 2) {
+                            mapper->registers[CHR_BANK_0] &= 1;
+                        }
+                        
                         break;
 
                     case 0x4000:
                         // CHR bank 1
                         mapper->registers[CHR_BANK_1] = mapper->registers[SHIFT_REGISTER];
+                        if (mapper->chr_rom_size < 2) {
+                            mapper->registers[CHR_BANK_1] &= 1;
+                        }
                         break;
 
                     default:
                         // PRG bank
-                        mapper->registers[PRG_BANK] = mapper->registers[SHIFT_REGISTER];
-                        break;
+                        mapper->registers[PRG_BANK] = mapper->registers[SHIFT_REGISTER]; break;
                 }
                 mapper->registers[SHIFT_REGISTER] = 0;
                 mapper->registers[WRITE_COUNTER] = 0;
@@ -181,153 +189,52 @@ void mmc1_write(struct Cpu *cpu) {
     /* exit(1); */
 }
 
-void mmc1_vram_read(struct Cpu *cpu, int vram_addr) {
+
+int mmc1_chr_read(int vram_addr) {
+
     if (vram_addr < 0x1000) {
-        // 0x000 - 0xFFF
-        cpu->data_bus = ppu->read_buffer;
 
-        if (mapper->chr_rom_size < 2) {
-            // using chr ram
-            if (mapper->registers[CHR_ROM_BANK_MODE]) {
-                ppu->read_buffer = ppu->ptables[(0x1000 * (mapper->registers[CHR_BANK_0]&1)) 
-                    + vram_addr];
-            }else {
-                ppu->read_buffer = ppu->ptables[vram_addr];
-            }
+        if (mapper->registers[CHR_ROM_BANK_MODE]) {
+            // switch 4kb
+            return mapper->chr_banks[(0x1000 * mapper->registers[CHR_BANK_0]) + vram_addr];
         } else {
-            if (mapper->registers[CHR_ROM_BANK_MODE]) {
-                if (mapper->registers[CHR_BANK_0] <= (mapper->chr_rom_size * 2)) {
-                    ppu->read_buffer = mapper->chr_banks[(0x1000 * 
-                            (mapper->registers[CHR_BANK_0])) + vram_addr];
-                } else {
-                    printf("4kb banks - %d, switching - %d\n", mapper->chr_rom_size * 2,
-                             mapper->registers[CHR_BANK_0]);
-                    exit(1);
-                }
-            } else {
-                // 8kb switching
-                if ((mapper->registers[CHR_BANK_1] & 0b11110) <= mapper->chr_rom_size) {
-                    ppu->read_buffer = mapper->chr_banks[(0x2000 * 
-                            (mapper->registers[CHR_BANK_1] & 0b11110)) + vram_addr];
-                    mapper->current_chr_bank = mapper->registers[CHR_BANK_1] & 0b11110;
-                } else {
-                    printf("8kb banks - %d, switching - %d\n", mapper->chr_rom_size, 
-                            mapper->registers[CHR_BANK_1]);
-                    exit(1);
-                }
-            }
+            // switch 8kb
+            mapper->current_chr_bank = (mapper->registers[CHR_BANK_0] & 0b11110);
+            return mapper->chr_banks[(0x2000 * mapper->current_chr_bank) + vram_addr];
         }
-
-        return;
-
-    } 
-    if (vram_addr < 0x2000) {
-        // 0x1000 - 0x1FFF
-        cpu->data_bus = ppu->read_buffer;
-        if (mapper->chr_rom_size < 2) {
-            // using chr ram
-            if (mapper->registers[CHR_ROM_BANK_MODE]) {
-                ppu->read_buffer = ppu->ptables[(0x1000 * (mapper->registers[CHR_BANK_0]&1))
-                +(vram_addr % 0x1000)];
-            } else {
-                ppu->read_buffer = ppu->ptables[vram_addr];
-            }
-        } else {
-
-            if (mapper->registers[CHR_ROM_BANK_MODE]) {
-                if (mapper->registers[CHR_BANK_0] <= (mapper->chr_rom_size * 2)) {
-                    ppu->read_buffer = mapper->chr_banks[(0x1000 * 
-                            (mapper->registers[CHR_BANK_0])) + (vram_addr % 0x1000)];
-                } else {
-                    printf("4kb banks - %d, switching - %d\n", mapper->chr_rom_size * 2,
-                             mapper->registers[CHR_BANK_0]);
-                    exit(1);
-                }
-            } else {
-                // 8kb switching
-                ppu->read_buffer = mapper->chr_banks[(0x2000 * 
-                        mapper->current_chr_bank) + vram_addr];
-            }
-        }
-
-        return;
     }
-    cpu->data_bus = ppu->read_buffer;
-    // TODO: Four screen mirroring
-    ppu->read_buffer = ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)];
+
+    if (mapper->registers[CHR_ROM_BANK_MODE]) {
+        // switch 4kb
+        return mapper->chr_banks[(0x1000 * mapper->registers[CHR_BANK_1]) + (vram_addr % 0x1000)];
+    } 
+
+    return mapper->chr_banks[(0x2000 * mapper->current_chr_bank) + vram_addr];
 }
 
-void mmc1_vram_write(struct Cpu *cpu, int vram_addr) {
-
+void mmc1_chr_write(unsigned char data, int vram_addr) {
     if (vram_addr < 0x1000) {
-        // 0x000 - 0xFFF
-        if (mapper->chr_rom_size < 2) {
-            // using chr ram
-            if (mapper->registers[CHR_ROM_BANK_MODE]) {
-                ppu->ptables[(0x1000 * (mapper->registers[CHR_BANK_0]&1)) + vram_addr] = 
-                    cpu->data_bus;
-            }else {
-                ppu->ptables[vram_addr] = cpu->data_bus;
-            }
+
+        if (mapper->registers[CHR_ROM_BANK_MODE]) {
+            // switch 4kb
+            mapper->chr_banks[(0x1000 * mapper->registers[CHR_BANK_0]) + vram_addr] = data;
         } else {
-            if (mapper->registers[CHR_ROM_BANK_MODE]) {
-                if (mapper->registers[CHR_BANK_0] <= (mapper->chr_rom_size * 2)) {
-                   mapper->chr_banks[(0x1000 * 
-                            (mapper->registers[CHR_BANK_0])) + vram_addr] = cpu->data_bus;
-                } else {
-                    printf("4kb banks - %d, switching - %d\n", mapper->chr_rom_size * 2,
-                             mapper->registers[CHR_BANK_0]);
-                    exit(1);
-                }
-            } else {
-                // 8kb switching
-                if ((mapper->registers[CHR_BANK_1] & 0b11110) <= mapper->chr_rom_size) {
-                    mapper->chr_banks[(0x2000 * 
-                            (mapper->registers[CHR_BANK_1] & 0b11110)) + vram_addr] = cpu->data_bus;
-                    mapper->current_chr_bank = mapper->registers[CHR_BANK_1] & 0b11110;
-                } else {
-                    printf("8kb banks - %d, switching - %d\n", mapper->chr_rom_size, 
-                            mapper->registers[CHR_BANK_1]);
-                }
-            }
+            // switch 8kb
+            mapper->current_chr_bank = (mapper->registers[CHR_BANK_0] & 0b11110);
+            mapper->chr_banks[(0x2000 * mapper->current_chr_bank) + vram_addr] = data;
         }
-
-        return;
-
-    } 
-    if (vram_addr < 0x2000) {
-        // 0x1000 - 0x1FFF
-        if (mapper->chr_rom_size < 2) {
-            // using chr ram
-            if (mapper->registers[CHR_ROM_BANK_MODE]) {
-                ppu->ptables[(0x1000 * (mapper->registers[CHR_BANK_0] & 1)) +(vram_addr % 0x1000) ] = 
-                    cpu->data_bus;
-            } else {
-                ppu->ptables[vram_addr] = cpu->data_bus;
-            }
-        } else {
-
-            if (mapper->registers[CHR_ROM_BANK_MODE]) {
-                if (mapper->registers[CHR_BANK_0] <= (mapper->chr_rom_size * 2)) {
-                    mapper->chr_banks[(0x1000 * 
-                            (mapper->registers[CHR_BANK_0])) + (vram_addr % 0x1000)] = cpu->data_bus;
-                } else {
-                    printf("4kb banks - %d, switching - %d\n", mapper->chr_rom_size * 2,
-                             mapper->registers[CHR_BANK_0]);
-                    exit(1);
-                }
-            } else {
-                // 8kb switching
-                mapper->chr_banks[(0x2000 * 
-                        mapper->current_chr_bank) + vram_addr] = cpu->data_bus;
-            }
-        }
-
         return;
     }
 
-    ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)] = cpu->data_bus;
+    if (mapper->registers[CHR_ROM_BANK_MODE]) {
+        // switch 4kb
+       mapper->chr_banks[(0x1000 * mapper->registers[CHR_BANK_1]) + (vram_addr % 0x1000)] = data;
+       return;
+    } 
+
+    mapper->chr_banks[(0x2000 * mapper->current_chr_bank) + vram_addr] = data;
 }
+
 
 
 #undef SHIFT_REGISTER
