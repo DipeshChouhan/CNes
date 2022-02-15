@@ -315,12 +315,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         cpu->total_cycles += 7;
         return 7;
     }
-    
-#ifdef DEBUG_ON
-    /* char input[10]; */
-    PRINT(cpu);
-    /* scanf("%s", input); */
-#endif
+
     
     FETCH_OPCODE(cpu);
 

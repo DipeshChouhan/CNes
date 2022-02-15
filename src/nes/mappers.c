@@ -32,17 +32,13 @@
 unsigned char dynamic_latch = 0;
 
 int vertical_mirroring(int addr) {
-    if (addr < 0x400) {
-        return addr;
-    }
     if (addr < 0x800) {
-        return (addr & 0x3FF) + 0x400;
+        return addr;
     }
     if (addr < 0xC00) {
         return addr & 0x3FF;
     }
-
-    return (addr & 0x3FF) + 0x400;
+    return addr & 0x7FF;
 }
 
 int horizontal_mirroring(int addr) {

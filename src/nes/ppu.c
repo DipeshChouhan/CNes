@@ -74,40 +74,6 @@
 #define AT_X ((VRAM_X(ppu->v) / 2) % 2)
 #define AT_Y ((VRAM_Y(ppu->v) / 2) % 2)
 
-void print_nametables() {
-    // name table 1 
-    for (int i = 0; i < 960; i++) {
-        if (i % 32 == 0) {
-            printf("\n");
-        }
-        printf(" %d ", ppu->nametables[i]);
-    }
-    printf("----------------------------------\n");
-
-}
-
-void print_oam2() {
-    for (int i = 0; i < 32; i+=4) {
-        printf("y - %d, tile - %d, at - %d, x - %d\n", ppu->oam2[i], ppu->oam2[i + 1], ppu->oam2[i + 2], ppu->oam2[i + 3]);
-    }
-}
-
-void print_oam() {
-    for (int i = 0; i < 256; i += 4) {
-        printf("y - %d, tile - %d, at - %d, x - %d\n", ppu->oam[i], ppu->oam[i + 1], ppu->oam[i + 2], ppu->oam[i + 3]);
-    }
-}
-void print_sprites_x(int *latch) {
-    for (int i = 0; i < 8; i++){
-        printf(" %d ", latch[i]);
-    }
-    
-    printf("\n___________________________________\n");
-}
-
-
-
-
 #define LOAD_BG_REGISTERS(_bg_latch)                    \
     bg_low = bg_low | (_bg_latch & 0xFF);               \
     bg_high = bg_high | ((_bg_latch >> 8) & 0xFF);      \
@@ -115,12 +81,10 @@ void print_sprites_x(int *latch) {
     at_high = at_high | ((at_latch & 2) ? 0xFF : 0x00); \
 
 #define UPDATE_BG_REGISTERS()       \
-    if (PPUMASK_BG_SHOW(ppu->ppu_mask)) {   \
         bg_low <<= 1;               \
         bg_high <<= 1;              \
         at_low <<= 1;               \
         at_high <<= 1;              \
-    }                               \
 
 
 #define BACKGROUND_TILES()                                                          \
