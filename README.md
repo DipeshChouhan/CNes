@@ -8,16 +8,7 @@ Emulator is tested on linux. SDL2 must be installed. Sound is not emulated yet.
 
 **Supported mappers - NROM, UXROM, CNROM, MMC1, GXROM**
 
-**Screenshots of emulator running some games of NROM and UxROM mappers**
+**Screenshots of emulator running some games**
 
-![Galaxian](https://github.com/DipeshChouhan/CNes/blob/main/images/galaxian.png)
+![Galaxian](https://github.com/DipeshChouhan/CNes/blob/main/images/games1.jpg)
 
-![Super Mario Bros](https://github.com/DipeshChouhan/CNes/blob/main/images/smb.png)
-
-![Contra](https://github.com/DipeshChouhan/CNes/blob/main/images/contra.png)
-
-![Castlevania](https://github.com/DipeshChouhan/CNes/blob/main/images/castlevania.png)
-
-![Megaman](https://github.com/DipeshChouhan/CNes/blob/main/images/megaman.png)
-
-![Metal Gear](https://github.com/DipeshChouhan/CNes/blob/main/images/metalgear.png)
