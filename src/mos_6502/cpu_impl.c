@@ -9,17 +9,6 @@
 #define PRINT(_cpu)                                                 \
     printf("%0X     , A: %0X    , X: %0X    , Y: %0X    , PS: %0X   , SP: %0X, cycles - %d\n", _cpu->pc, _cpu->a, _cpu->x, _cpu->y, _cpu->ps.value, _cpu->sp, cpu->total_cycles); \
 
-static void cpu_read(struct Cpu *cpu) {
-    printf("error\n");
-    exit(0);
-    cpu->data_bus = cpu->mem[cpu->address_bus];
-}
-
-static void cpu_write(struct Cpu *cpu) {
-    printf("error\n");
-    exit(0);
-    cpu->mem[cpu->address_bus] = cpu->data_bus;
-}
 
 #define cycles cpu->cycles
 
@@ -1162,13 +1151,15 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x6C:
-            /* printf("JMP Indirect Absolute\n"); */
             FETCH_ADL(cpu);     // T1
             FETCH_ADH(cpu);     // T2
             
-            cpu->pc = cpu->mem[(adh<<8)|adl];   // T3 PCL
-            temp = cpu->mem[(adh<<8) | ((adl + 1) & 0xFF)]; // T4 PCH
-            cpu->pc = (temp<<8)|cpu->pc;
+            cpu->address_bus = (adh << 8) | adl;
+            cpu->cpu_read(cpu);
+            cpu->pc = cpu->data_bus;   // T3 PCL
+            cpu->address_bus = (adh << 8) | ((adl + 1) & 0xFF);
+            cpu->cpu_read(cpu);
+            cpu->pc = (cpu->data_bus<<8)|cpu->pc;
             cycles = 5;
             break;
 
@@ -2464,13 +2455,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
     return cycles;
 }
 
-void initialize(struct Cpu *cpu) {
-    cpu->cpu_read = &cpu_read;
-    cpu->cpu_write = &cpu_write;
-    IDF = 1;
-    NUF = 1;
-    BF = 1;
-}
 
 #undef RESET_VECTOR_LOW
 #undef RESET_VECTOR_HIGH

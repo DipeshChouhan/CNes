@@ -2,7 +2,8 @@
 #define _CONTROLLERS_H
 
 extern unsigned char joypad1;
-extern unsigned char joypad2;
+extern unsigned char joypad1_btn;
+extern unsigned char joypad2_btn;
 extern unsigned char joypad1_read_count;
 
 

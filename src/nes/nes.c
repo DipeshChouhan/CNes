@@ -77,37 +77,17 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
         // mapper nrom
         case 0:
             // do stuff
-            if (prg_rom_size == 1) {
-                // 128
-                memcpy(&(cpu->mem[0xc000]),data + count, 0x4000);
-                /* data += 0x4000; */
-                count += 0x4000;
-            }else if (prg_rom_size == 2) {
-                // 256
-                memcpy(&(cpu->mem[0x8000]), data + count,  0x4000);  // first 16kb
-                /* data += 0x4000; */
-                count += 0x4000;
-                memcpy(&(cpu->mem[0xc000]), data + count, 0x4000);  // second 16kb
-                /* data += 0x4000; */
-                count += 0x4000;
-
+            mapper->prg_banks = malloc(0x4000 * prg_rom_size);
+            memcpy(mapper->prg_banks, data + count, 0x4000 * prg_rom_size);
+            count += 0x4000 * prg_rom_size;
+            mapper->prg_rom_size = prg_rom_size;
+            if (chr_rom_size == 0) {
+                mapper->chr_banks = malloc(0x2000);
             } else {
-                printf("mapper 0 don't support more prg rom than 32kb\n");
-                exit(1);
+                mapper->chr_banks = malloc(0x2000 * chr_rom_size);
+                memcpy(mapper->chr_banks, data + count, 0x2000 * chr_rom_size);
             }
-            if (chr_rom_size > 1) {
-                printf("mapper 0 don't support more than 8kb of chr rom.\n");
-                exit (1);
-            }
-            if (chr_rom_size == 1) {
-                memcpy(&(ppu->ptables), data + count, 0x2000);
-            } else {
-                // chr ram
-                printf("Rom is using CHR RAM.\n");
-                /* exit(1); */
-            }
-            mapper->free_chr_banks = 0;
-            mapper->free_prg_banks = 0;
+            mapper->chr_rom_size = chr_rom_size;
             cpu->cpu_read = nrom_read;
             cpu->cpu_write = nrom_write;
             mapper->chr_read = nrom_chr_read;
@@ -122,7 +102,6 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
                 exit(1);
             }
 
-            mapper->free_prg_banks = 1;
             mapper->prg_banks = malloc(0x4000 * prg_rom_size);
             memcpy(mapper->prg_banks, data + count, 0x4000 * prg_rom_size);
             count += 0x4000 * prg_rom_size;
@@ -151,16 +130,18 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
             // uxROM
             // TODO: Fix it
             printf("UXROM mapper\n");
-            --prg_rom_size;
-            mapper->prg_rom_size = prg_rom_size;
-            mapper->free_chr_banks = 0;
-            mapper->free_prg_banks = 1;   // prg rom banks allocated
-            // UNROM 7 and UOROM 15
-            mapper->registers[1] = (prg_rom_size > 7) ? 15 : 7;
+            mapper->prg_rom_size = prg_rom_size - 1;
             mapper->prg_banks = malloc(0x4000 * prg_rom_size);
             memcpy(mapper->prg_banks, data + count, 0x4000 * prg_rom_size);
             count += 0x4000 * prg_rom_size;
-            memcpy(&(cpu->mem[0xC000]), data + count, 0x4000);
+            if (chr_rom_size == 0) {
+                mapper->chr_banks = malloc(0x2000);
+            } else {
+                mapper->chr_banks = malloc(0x2000 * chr_rom_size);
+                memcpy(mapper->prg_banks, data + count, 0x2000);    // 8kb
+            }
+            mapper->registers[1] = prg_rom_size > 8 ? 15 : 7;
+            mapper->chr_rom_size = chr_rom_size;
             cpu->cpu_read = uxrom_read;
             cpu->cpu_write = uxrom_write;
             mapper->chr_read = uxrom_chr_read;
@@ -182,6 +163,7 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
                 memcpy(mapper->chr_banks, data + count, 0x2000 * chr_rom_size);
             }
 
+            
             cpu->cpu_read = gxrom_read;
             cpu->cpu_write = gxrom_write;
             mapper->chr_read = gxrom_chr_read;

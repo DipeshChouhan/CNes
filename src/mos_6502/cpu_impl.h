@@ -21,7 +21,7 @@ union flags {
 
 // mos 6502
  struct Cpu{
-    uint8_t mem[65536];     // 64kb memory   
+    uint8_t mem[0x800];     // 64kb memory   
     int cycles;             // cpu cycles
     uint16_t pc;            // program counter
     uint8_t sp;             // stack pointer

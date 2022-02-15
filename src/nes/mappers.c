@@ -129,15 +129,14 @@ void common_read(struct Cpu *cpu) {
     // joypad 1
     if (cpu->address_bus == JOYPAD1) {
         // read
-        if ((cpu->mem[JOYPAD1] & 1) == 1) {
-            cpu->data_bus = (joypad1 & 1);
-            /* printf("1 read %d\n", cpu->data_bus); */
+        if ((joypad1 & 1) == 1) {
+            cpu->data_bus = (joypad1_btn & 1);
         } else {
             if (joypad1_read_count == 8) {
                 cpu->data_bus = 1;
                 /* printf("8 read 1\n"); */
             } else {
-                cpu->data_bus = (joypad1 >> joypad1_read_count) & 1;
+                cpu->data_bus = (joypad1_btn >> joypad1_read_count) & 1;
                 /* printf("read %d\n", cpu->data_bus); */
                 ++joypad1_read_count;
             }
@@ -272,22 +271,14 @@ void common_write(struct Cpu *cpu) {
 
     // nes apu and io registers
     if (cpu->address_bus == OAMDMA) {
-        // OAMDMA       // write
-        /* int addr = cpu->data_bus << 8; */
-        /* int oam_addr = cpu->mem[OAMADDR]; */
         cpu_oamdma_addr = cpu->data_bus << 8;
         oamdma_addr = ppu->oam_addr;
         ppu->oam_dma = 1;
-
-        /* for (int i = 0; i < 256; i++) { */
-        /*     ppu->oam[oam_addr & 0xFF] = cpu->mem[addr++]; */
-        /*     ++oam_addr; */
-        /* } */
         return;
     }
 
     if (cpu->address_bus == JOYPAD1) {
-        cpu->mem[JOYPAD1] = cpu->data_bus;
+        joypad1 = cpu->data_bus;
         if (cpu->data_bus & 1){
             joypad1_read_count = 0;
         }

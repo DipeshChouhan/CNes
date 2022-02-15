@@ -6,7 +6,7 @@
 
 #define DEBUG_ON
 int main(int argc, char* argv[]) {
-    power_on_nes("../test/Dragon Power (USA).nes");
+    power_on_nes("../test/Ice Climber (USA, Europe).nes");
     return 0;
     
 }

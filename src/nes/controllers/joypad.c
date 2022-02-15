@@ -3,7 +3,8 @@
 #include "controllers.h"
 
 unsigned char joypad1 = 0;
-unsigned char joypad2 = 0;
+unsigned char joypad1_btn = 0;
+unsigned char joypad2_btn = 0;
 unsigned char joypad1_read_count = 0;
 
 #define BUTTON_A        0b00000001;
@@ -20,56 +21,56 @@ void joypad1_events() {
         if (event.type == SDL_KEYDOWN) {
             switch(event.key.keysym.sym) {
                 case SDLK_d:
-                    JOYPAD_SET(joypad1, BUTTON_B);
+                    JOYPAD_SET(joypad1_btn, BUTTON_B);
                     break;
                 case SDLK_f:
-                    JOYPAD_SET(joypad1, BUTTON_A);
+                    JOYPAD_SET(joypad1_btn, BUTTON_A);
                     break;
                 case SDLK_RETURN:
-                    JOYPAD_SET(joypad1, BUTTON_START);
+                    JOYPAD_SET(joypad1_btn, BUTTON_START);
                     break;
                 case SDLK_SPACE:
-                    JOYPAD_SET(joypad1, BUTTON_SELECT);
+                    JOYPAD_SET(joypad1_btn, BUTTON_SELECT);
                     break;
                 case SDLK_DOWN:
-                    JOYPAD_SET(joypad1, BUTTON_DOWN);
+                    JOYPAD_SET(joypad1_btn, BUTTON_DOWN);
                     break;
                 case SDLK_UP:
-                    JOYPAD_SET(joypad1, BUTTON_UP);
+                    JOYPAD_SET(joypad1_btn, BUTTON_UP);
                     break;
                 case SDLK_LEFT:
-                    JOYPAD_SET(joypad1, BUTTON_LEFT);
+                    JOYPAD_SET(joypad1_btn, BUTTON_LEFT);
                     break;
                 case SDLK_RIGHT:
-                    JOYPAD_SET(joypad1, BUTTON_RIGHT);
+                    JOYPAD_SET(joypad1_btn, BUTTON_RIGHT);
                     break;
             }
         } else if(event.type == SDL_KEYUP) {
 
             switch(event.key.keysym.sym) {
                 case SDLK_d:
-                    JOYPAD_CLEAR(joypad1, BUTTON_B);
+                    JOYPAD_CLEAR(joypad1_btn, BUTTON_B);
                     break;
                 case SDLK_f:
-                    JOYPAD_CLEAR(joypad1, BUTTON_A);
+                    JOYPAD_CLEAR(joypad1_btn, BUTTON_A);
                     break;
                 case SDLK_RETURN:
-                    JOYPAD_CLEAR(joypad1, BUTTON_START);
+                    JOYPAD_CLEAR(joypad1_btn, BUTTON_START);
                     break;
                 case SDLK_SPACE:
-                    JOYPAD_CLEAR(joypad1, BUTTON_SELECT);
+                    JOYPAD_CLEAR(joypad1_btn, BUTTON_SELECT);
                     break;
                 case SDLK_DOWN:
-                    JOYPAD_CLEAR(joypad1, BUTTON_DOWN);
+                    JOYPAD_CLEAR(joypad1_btn, BUTTON_DOWN);
                     break;
                 case SDLK_UP:
-                    JOYPAD_CLEAR(joypad1, BUTTON_UP);
+                    JOYPAD_CLEAR(joypad1_btn, BUTTON_UP);
                     break;
                 case SDLK_LEFT:
-                    JOYPAD_CLEAR(joypad1, BUTTON_LEFT);
+                    JOYPAD_CLEAR(joypad1_btn, BUTTON_LEFT);
                     break;
                 case SDLK_RIGHT:
-                    JOYPAD_CLEAR(joypad1, BUTTON_RIGHT);
+                    JOYPAD_CLEAR(joypad1_btn, BUTTON_RIGHT);
                     break;
             }
         } else if (event.type == SDL_QUIT) {
