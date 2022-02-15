@@ -3,8 +3,6 @@
 #include "nes.h"
 #include "ppu.h"
 #include "./controllers/controllers.h"
-// TODO: Reading PPUSTATUS will clear vblank flag of PPUSTATUS register [IMP]
-//TODO: Check PPUDATA Read and Write for correctness
     /* Address range	Size	Device */
     /* $0000-$07FF	$0800	2KB internal RAM */
     /* $0800-$0FFF	$0800	Mirrors of $0000-$07FF */
@@ -71,8 +69,6 @@ void common_read(struct Cpu *cpu) {
             case PPUSTATUS:
                 // PPUSTATUS    // read
                 cpu->data_bus = ppu->ppu_status;
-                /* printf("reading ppu_status %d\n", cpu->data_bus); */
-                /* exit(0); */
                 ppu->write_toggle = 0;
                 PPUSTATUS_CLEAR_VBLANK(ppu->ppu_status);
                 
@@ -114,8 +110,6 @@ void common_read(struct Cpu *cpu) {
             default:
                 cpu->data_bus = dynamic_latch;
                 return;
-                /* printf("can't read from a write only ppu register %d\n", cpu->address_bus & 0x2007); */
-                /* exit(1); */
         }
         dynamic_latch = cpu->data_bus;
         return;
@@ -129,10 +123,8 @@ void common_read(struct Cpu *cpu) {
         } else {
             if (joypad1_read_count == 8) {
                 cpu->data_bus = 1;
-                /* printf("8 read 1\n"); */
             } else {
                 cpu->data_bus = (joypad1_btn >> joypad1_read_count) & 1;
-                /* printf("read %d\n", cpu->data_bus); */
                 ++joypad1_read_count;
             }
         }
@@ -225,21 +217,18 @@ void common_write(struct Cpu *cpu) {
                     /* t: Z...... ........ <- 0 (bit Z is cleared) */
                     /* w:                  <- 1 */
                     PPUADDR_FIRST_WRITE(ppu->t, cpu->data_bus);
-                    /* printf("first write %d\n", ppu->t); */
                     ppu->write_toggle  = 1;
                 } else {
                     /* t: ....... ABCDEFGH <- d: ABCDEFGH */
                     /* v: <...all bits...> <- t: <...all bits...> */
                     /* w:                  <- 0 */
                     PPUADDR_SECOND_WRITE(ppu->t, cpu->data_bus);
-                    /* printf("second write %d\n", ppu->t); */
                     ppu->v = ppu->t & 0b0111111111111111;
                     ppu->write_toggle = 0;
                 }
                 break;
             case PPUDATA:
                 // PPUDATA      // read/write
-                // TODO: Mirroring
                 if ((ppu->v & 0x3FFF) < 0x2000) {
                     mapper->chr_write(cpu->data_bus, ppu->v & 0x3FFF);
                 } else if ((ppu->v & 0x3FFF) < 0x3000) {
@@ -252,7 +241,6 @@ void common_write(struct Cpu *cpu) {
                     }
                     ppu->palette[temp] = cpu->data_bus;
                 } else {
-                    /* mapper->vram_write(cpu, ppu->v & 0x3FFF);    // 0x3000 - 0x3EFF mirrors of 0x2000 - 0x3EFF */
                     ppu->nametables[ppu->get_mirrored_addr(ppu->v & 0xFFF)] = cpu->data_bus;
                 }
 

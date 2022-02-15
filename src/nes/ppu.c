@@ -561,7 +561,6 @@ PRE_SPRITE_FETCH:
     
     if (ppu_cycle < 321) {
         ppu->oam_addr = 0;
-        // REMINDER: If any error occur check this for correctness.
         if (ppu_cycle >= 285 && ppu_cycle <= 304) {
             // copy vertical(v) = vertical(t)
             if (ppu_cycle & 1) {

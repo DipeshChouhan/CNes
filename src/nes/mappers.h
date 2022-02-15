@@ -38,6 +38,12 @@ void uxrom_write(struct Cpu *cpu);
 int uxrom_chr_read(int vram_addr);
 void uxrom_chr_write(unsigned char data, int vram_addr);
 
+void cnrom_read(struct Cpu *cpu);
+void cnrom_write(struct Cpu *cpu);
+int cnrom_chr_read(int vram_addr);
+void cnrom_chr_write(unsigned char data, int vram_addr);
+
+
 void mmc1_read(struct Cpu *cpu);
 void mmc1_write(struct Cpu *cpu);
 int mmc1_chr_read(int vram_addr);

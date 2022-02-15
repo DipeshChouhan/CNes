@@ -74,22 +74,18 @@ void mmc1_write(struct Cpu *cpu) {
                     switch(mapper->registers[SHIFT_REG] & 3) {
                         case 0:
                             ppu->get_mirrored_addr = one_screen_low_mirroring;
-                            printf("one screen lower\n");
                             break;
 
                         case 1:
                             ppu->get_mirrored_addr = one_screen_upper_mirroring;
-                            printf("one screen upper\n");
                             break;
 
                         case 2:
                             ppu->get_mirrored_addr = vertical_mirroring;
-                            printf("vertical\n");
                             break;
 
                         default:
                             ppu->get_mirrored_addr = horizontal_mirroring;
-                            printf("horizontal\n");
                             break;
                     }
                     mapper->registers[PRG_MODE] = (mapper->registers[SHIFT_REG] >> 2) & 3;

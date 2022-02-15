@@ -13,7 +13,6 @@
 #define cycles cpu->cycles
 
 
-    /* _cpu->ir = _cpu->mem[_cpu->pc];         \ */
 #define FETCH_OPCODE(_cpu)                  \
     _cpu->sync = 1;                         \
     _cpu->address_bus = _cpu->pc;            \
@@ -81,7 +80,6 @@
     FETCH_ADH(_cpu);                        \
     FETCH_ADDR(_cpu, (adh<<8)|adl);         \
 
-    /* _cpu->mem[(adh<<8)|adl] = _val;         \ */
 #define W_ABSOLUTE(_cpu, _val)              \
     FETCH_ADL(_cpu);                        \
     FETCH_ADH(_cpu);                        \
@@ -275,7 +273,6 @@ void power_on(struct Cpu *cpu) {
     // 0x100 + SP - 2   // Fourth start state   // T4
     // FETCH first vector
     IDF = 1;        // Turn on interrupt disable bit
-    /* BF = 1;   // for nestest */
     NUF = 1;
     cpu->sp = 0xFD;
     cpu->nmi = 0;
@@ -289,7 +286,6 @@ void power_on(struct Cpu *cpu) {
     cpu->total_cycles = 7;
     printf("pc vector %0X\n", cpu->pc);
 
-    /* printf("power on %0x\n", cpu->pc); */
     // now cpu is initialized to load first op code in 7 cycles
 }
 
@@ -300,7 +296,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
     if(cpu->nmi) {
         // process interrupt nmi
-        /* cpu->pc += 1; */
         PUSH_STACK(cpu, (cpu->pc >> 8));    // T1, T2 PCH
         PUSH_STACK(cpu, (cpu->pc & 255));   // T3 PCL
         PUSH_STACK(cpu, PS.value);    // T4
@@ -323,7 +318,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         // LDA
         case 0xA9:
             // immediate
-            /* printf("LDA Immediate  A - %0X\n", A); */
             IMMEDIATE(cpu);
             A = DATA;
             ZF_NF(A);
@@ -331,7 +325,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             
         case 0xA5:
             // Zero Page
-            /* printf("LDA Zero Page\n"); */
             ZERO_PAGE(cpu);
             A = DATA;
             ZF_NF(A);
@@ -340,17 +333,14 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         case 0xB5:
             // Zero Page X
-            /* printf("LDA Zero Page X\n"); */
             ZERO_PAGE_X(cpu);
             A = DATA;
-            /* printf("A - %0X\n", A); */
             ZF_NF(A);
             cycles = 4;
             break;
 
         case 0xAD:
             // Absolute
-            /* printf("LDA Absolute\n"); */
             ABSOLUTE(cpu);
             A = DATA;
             ZF_NF(A);
@@ -359,18 +349,15 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         case 0xBD:
             // Absolute X
-            /* printf("LDA Absolute X\n"); */
             ABSOLUTE_X(cpu);
             cycles = 4;
             PAGE_CROSSED;
             A = DATA;
-            /* printf(" X - %0X, A - %0X\n",X, cpu->mem[(uint16_t)((adh<<8)|(adl + X))]); */
             ZF_NF(A);
             break;
 
         case 0xB9:
             // Absolute Y
-            /* printf("LDA Absolute Y\n"); */
             ABSOLUTE_Y(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -380,7 +367,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         case 0xA1:
             // Indexed Indirect
-            /* printf("LDA Indexed Indirect\n"); */
             INDEXED_INDIRECT(cpu);
             A = DATA;
             ZF_NF(A);
@@ -389,7 +375,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             
         case 0xB1:
             // Indirect indexed addressing
-            /* printf("LDA Indirect Indexed\n"); */
             INDIRECT_INDEXED(cpu);
             cycles = 5;
             PAGE_CROSSED;
@@ -458,49 +443,42 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         // STA
         case 0x85:
             // Zero Page
-            /* printf("STA Zero Page\n"); */
             W_ZERO_PAGE(cpu, A);
             cpu->rw = 1;
             break;
             
         case 0x95:
             // Zero Page X
-            /* printf("STA Zero Page X\n"); */
             W_ZERO_PAGE_X(cpu, A);
             cpu->rw = 1;
             break;
 
         case 0x8D:
             // Absolute
-            /* printf("STA Absolute\n"); */
             W_ABSOLUTE(cpu, A);
             cpu->rw = 1;
             break;
 
         case 0x9D:
             // Absolute X
-            /* printf("STA Absolute X\n"); */
             W_ABSOLUTE_X(cpu, A);
             cpu->rw = 1;
             break;
 
         case 0x99:
             // Absolute Y
-            /* printf("STA Absolute Y\n"); */
             W_ABSOLUTE_Y(cpu, A);
             cpu->rw = 1;
             break;
 
         case 0x81:
             // Indexed Indirect
-            /* printf("STA Indexed Indirect\n"); */
             W_INDEXED_INDIRECT(cpu, A);
             cpu->rw = 1;
             break;
         
         case 0x91:
             // Indirect Indexed
-            /* printf("STA Indirect Indexed\n"); */
             W_INDIRECT_INDEXED(cpu, A);
             cpu->rw = 1;
             break;
@@ -535,7 +513,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         // ADC
         case 0x69:
-            /* printf("ADC Immediate\n"); */
             IMMEDIATE(cpu);
             temp = A + DATA + CF;
             CF = temp>>8;   // carry bit
@@ -545,7 +522,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0x65:
-            /* printf("ADC Zero Page\n"); */
             ZERO_PAGE(cpu);
             temp = A + DATA + CF;
             CF = temp>>8;   // carry bit
@@ -556,7 +532,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x75:
-            /* printf("ADC Zero Page, X\n"); */
             ZERO_PAGE_X(cpu);
             temp = A + DATA + CF;
             CF = temp>>8;   // carry bit
@@ -567,7 +542,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x6D:
-            /* printf("ADC Absolute\n"); */
             ABSOLUTE(cpu);
             temp = A + DATA + CF;
             CF = temp>>8;   // carry bit
@@ -578,7 +552,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x7D:
-            /* printf("ADC Absolute, X\n"); */
             ABSOLUTE_X(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -590,7 +563,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x79:
-            /* printf("ADC Absolute, Y\n"); */
             ABSOLUTE_Y(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -602,7 +574,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0x61:
-            /* printf("ADC Indexed Indirect\n"); */
             INDEXED_INDIRECT(cpu);
             temp = A + DATA + CF;
             CF = temp>>8;   // carry bit
@@ -613,7 +584,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0x71:
-            /* printf("ADC Indirect Indexed\n"); */
             INDIRECT_INDEXED(cpu);
             cycles = 5;
             PAGE_CROSSED;
@@ -726,7 +696,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         // SBC
         // REMINDER: If any error occured. Check SBC implementation and specially setting of VF and CF flags
         case 0xE9:
-            /* printf("SBC Immediate\n"); */
             IMMEDIATE(cpu);
             // Taking two's complement of data
             temp = A + ((uint8_t)(~DATA) + CF);
@@ -748,7 +717,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0xE5:
-            /* printf("SBC Zero Page\n"); */
             ZERO_PAGE(cpu);
             // Taking two's complement of data
             temp = A + ((uint8_t)(~DATA) + CF);
@@ -760,7 +728,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xF5:
-            /* printf("SBC Zero Page, X\n"); */
             ZERO_PAGE_X(cpu);
             // Taking two's complement of data
             temp = A + ((uint8_t)(~DATA) + CF);
@@ -772,7 +739,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xED:
-            /* printf("SBC Absolute\n"); */
             ABSOLUTE(cpu);
             // Taking two's complement of data
             temp = A + ((uint8_t)(~DATA) + CF);
@@ -784,7 +750,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xFD:
-            /* printf("SBC Absolute, X\n"); */
             ABSOLUTE_X(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -797,7 +762,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0xF9:
-            /* printf("SBC Absolute, Y\n"); */
             ABSOLUTE_Y(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -810,7 +774,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xE1:
-            /* printf("SBC Indexed Indirect\n"); */
             INDEXED_INDIRECT(cpu);
             // Taking two's complement of data
             temp = A + ((uint8_t)(~DATA) + CF);
@@ -822,7 +785,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xF1:
-            /* printf("SBC Indirect Indexed\n"); */
             INDIRECT_INDEXED(cpu);
             cycles = 5;
             PAGE_CROSSED;
@@ -836,14 +798,12 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         // AND
         case 0x29:
-            /* printf("AND Immediate\n"); */
             IMMEDIATE(cpu);
             A &= DATA;
             ZF_NF(A);
             break;
 
         case 0x25:
-            /* printf("AND Zero Page\n"); */
             ZERO_PAGE(cpu);
             A &= DATA;
             ZF_NF(A);
@@ -851,7 +811,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x35:
-            /* printf("AND Zero Page X\n"); */
             ZERO_PAGE_X(cpu);
             A &= DATA;
             ZF_NF(A);
@@ -859,7 +818,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x2D:
-            /* printf("AND Absolute\n"); */
             ABSOLUTE(cpu);
             A &= DATA;
             ZF_NF(A);
@@ -867,7 +825,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x3D:
-            /* printf("AND Absolute X\n"); */
             ABSOLUTE_X(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -876,7 +833,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0x39:
-            /* printf("AND Absolute Y\n"); */
             ABSOLUTE_Y(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -885,7 +841,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0x21:
-            /* printf("AND Indexed Indirect\n"); */
             INDEXED_INDIRECT(cpu);
             A &= DATA;
             ZF_NF(A);
@@ -893,7 +848,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x31:
-            /* printf("AND Indirect Indexed\n"); */
             INDIRECT_INDEXED(cpu);
             cycles = 5;
             PAGE_CROSSED;
@@ -903,14 +857,12 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         // ORA
         case 0x09:
-            /* printf("ORA Immediate\n"); */
             IMMEDIATE(cpu);
             A |= DATA;
             ZF_NF(A);
             break;
 
         case 0x05:
-            /* printf("ORA Zero Page\n"); */
             ZERO_PAGE(cpu);
             A |= DATA;
             ZF_NF(A);
@@ -918,7 +870,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x15:
-            /* printf("ORA Zero Page X\n"); */
             ZERO_PAGE_X(cpu);
             A |= DATA;
             ZF_NF(A);
@@ -926,7 +877,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x0D:
-            /* printf("ORA Absolute\n"); */
             ABSOLUTE(cpu);
             A |= DATA;
             ZF_NF(A);
@@ -934,7 +884,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x1D:
-            /* printf("ORA Absolute X\n"); */
             ABSOLUTE_X(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -943,7 +892,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x19:
-            /* printf("ORA Absolute Y\n"); */
             ABSOLUTE_Y(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -952,7 +900,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x01:
-            /* printf("ORA Indexed Indirect\n"); */
             INDEXED_INDIRECT(cpu);
             A |= DATA;
             ZF_NF(A);
@@ -960,7 +907,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x11:
-            /* printf("ORA Indirect Indexed\n"); */
             INDIRECT_INDEXED(cpu);
             cycles = 5;
             PAGE_CROSSED;
@@ -1037,14 +983,12 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         // EOR
         case 0x49:
-            /* printf("EOR Immediate\n"); */
             IMMEDIATE(cpu);
             A ^= DATA;
             ZF_NF(A);
             break;
 
         case 0x45:
-            /* printf("EOR Zero Page\n"); */
             ZERO_PAGE(cpu);
             A ^= DATA;
             ZF_NF(A);
@@ -1052,7 +996,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x55:
-            /* printf("EOR Zero Page X\n"); */
             ZERO_PAGE_X(cpu);
             A ^= DATA;
             ZF_NF(A);
@@ -1060,7 +1003,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0x4D:
-            /* printf("EOR Absolute\n"); */
             ABSOLUTE(cpu);
             A ^= DATA;
             ZF_NF(A);
@@ -1068,7 +1010,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x5D:
-            /* printf("EOR Absolute X\n"); */
             ABSOLUTE_X(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -1077,7 +1018,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x59:
-            /* printf("EOR Absolute Y\n"); */
             ABSOLUTE_Y(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -1086,7 +1026,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x41:
-            /* printf("EOR Indexed Indirect\n"); */
             INDEXED_INDIRECT(cpu);
             A ^= DATA;
             ZF_NF(A);
@@ -1094,7 +1033,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x51:
-            /* printf("EOR Indirect Indexed\n"); */
             INDIRECT_INDEXED(cpu);
             cycles = 5;
             PAGE_CROSSED;
@@ -1103,42 +1041,34 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x18:
-            /* printf("CLC Implied\n"); */
             CF = 0;
             break;
 
         case 0x38:
-            /* printf("SEC Implied\n"); */
             CF = 1;
             break;
 
         case 0x58:
-            /* printf("CLI Implied\n"); */
             IDF = 0;
             break;
 
         case 0x78:
-            /* printf("SEI Implied\n"); */
             IDF = 1;
             break;
 
         case 0xB8:
-            /* printf("CLV Implied\n"); */
             VF = 0;
             break;
 
         case 0xD8:
-            /* printf("CLD Implied\n"); */
             DF = 0;
             break;
 
         case 0xF8:
-            /* printf("SED Implied\n"); */
             DF = 1;
             break;
 
         case 0x4C:
-            /* printf("JMP Absolute\n"); */
             FETCH_ADL(cpu);     // T1
             FETCH_ADH(cpu);     // T2
             cpu->pc = (adh<<8)|adl;
@@ -1160,50 +1090,40 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         // BPL
         case 0x10:
-            /* printf("BPL Relative\n"); */
             RELATIVE(cpu, (NF == 0));
             break;
 
         // BMI
         case 0x30:
-            /* printf("BMI Relative\n"); */
             RELATIVE(cpu, NF);
             break;
 
         case 0x50:
-            /* printf("BVC Relative\n"); */
             RELATIVE(cpu, (VF == 0));
             break;
 
         case 0x70:
-            /* printf("BVS Relative\n"); */
             RELATIVE(cpu, VF);
             break;
 
         case 0x90:
-            /* printf("BCC Relative\n"); */
             RELATIVE(cpu, (CF == 0));
             break;
 
         case 0xB0:
-            /* printf("BCS Relative\n"); */
             RELATIVE(cpu, CF);
             break;
 
         case 0xD0:
-            /* printf("BNE Relative %0X\n", cpu->pc); */
-            /* printf("ZF - %0X\n", ZF); */
             RELATIVE(cpu, (ZF == 0));
             break;
 
         case 0xF0:
-            /* printf("BEQ Relative\n"); */
             RELATIVE(cpu, ZF);
             break;
 
             //CMP
         case 0xC9:
-            /* printf("CMP Immediate   A - %0X\n", A); */
             IMMEDIATE(cpu);
             temp = A - DATA;
             temp &= 255;        // clearing carry
@@ -1212,7 +1132,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xC5:
-            /* printf("CMP Zero Page\n"); */
             ZERO_PAGE(cpu);
             temp = A - DATA;
             temp &= 255;        // clearing carry
@@ -1222,9 +1141,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xD5:
-            /* printf("CMP Zero Page X\n"); */
             ZERO_PAGE_X(cpu);
-            /* printf("A - %0X\n", DATA); */
             temp = A - DATA;
             temp &= 255;        // clearing carry
             CF = DATA <= A;
@@ -1233,7 +1150,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xCD:
-            /* printf("CMP Absolute\n"); */
             ABSOLUTE(cpu);
             temp = A - DATA;
             temp &= 255;        // clearing carry
@@ -1243,20 +1159,16 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xDD:
-            /* printf("CMP Absolute X A - %0X\n", A); */
             ABSOLUTE_X(cpu);
-            /* printf("DATA - %0X\n", DATA); */
             cycles = 4;
             PAGE_CROSSED;
             temp = A - DATA;
             temp &= 255;        // clearing carry
             CF = DATA <= A;
             ZF_NF(temp);
-            /* printf("ZF - %0X\n", PC); */
             break;
 
         case 0xD9:
-            /* printf("CMP Absolute Y\n"); */
             ABSOLUTE_Y(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -1267,7 +1179,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xC1:
-            /* printf("CMP Indexed Indirect\n"); */
             INDEXED_INDIRECT(cpu);
             temp = A - DATA;
             temp &= 255;        // clearing carry
@@ -1277,7 +1188,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xD1:
-            /* printf("CMP Indirect Indexed\n"); */
             INDIRECT_INDEXED(cpu);
             cycles = 5;
             PAGE_CROSSED;
@@ -1384,7 +1294,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         // BIT
         case 0x24:
-            /* printf("BIT Zero Page\n"); */
             ZERO_PAGE(cpu);
             temp = DATA & A;
             ZF = (temp == 0);
@@ -1394,7 +1303,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x2C:
-            /* printf("BIT Absolute\n"); */
             ABSOLUTE(cpu);
             temp = DATA & A;
             ZF = (temp == 0);
@@ -1405,15 +1313,12 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             
         // LDX
         case 0xA2:
-            /* printf("LDX Immediate\n"); */
             IMMEDIATE(cpu);
             X = DATA;
-            /* printf("X - %0X\n", DATA); */
             ZF_NF(X);
             break;
 
         case 0xA6:
-            /* printf("LDX Zero Page\n"); */
             ZERO_PAGE(cpu);
             X = DATA;
             ZF_NF(X);
@@ -1421,7 +1326,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xB6:
-            /* printf("LDX Zero Page Y\n"); */
             ZERO_PAGE_Y(cpu);
             X = DATA;
             ZF_NF(X);
@@ -1429,7 +1333,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xAE:
-            /* printf("LDX Absolute\n"); */
             ABSOLUTE(cpu);
             X = DATA;
             ZF_NF(X);
@@ -1437,7 +1340,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0xBE:
-            /* printf("LDX Absolute Y\n"); */
             ABSOLUTE_Y(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -1447,14 +1349,12 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         // LDY
         case 0xA0:
-            /* printf("LDY Immediate\n"); */
             IMMEDIATE(cpu);
             Y = DATA;
             ZF_NF(Y);
             break;
 
         case 0xA4:
-            /* printf("LDY Zero Page\n"); */
             ZERO_PAGE(cpu);
             Y = DATA;
             ZF_NF(Y);
@@ -1462,7 +1362,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xB4:
-            /* printf("LDY Zero Page X\n"); */
             ZERO_PAGE_X(cpu);
             Y = DATA;
             ZF_NF(Y);
@@ -1470,7 +1369,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0xAC:
-            /* printf("LDY Absolute\n"); */
             ABSOLUTE(cpu);
             Y = DATA;
             ZF_NF(Y);
@@ -1478,7 +1376,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xBC:
-            /* printf("LDY Absolute X\n"); */
             ABSOLUTE_X(cpu);
             cycles = 4;
             PAGE_CROSSED;
@@ -1488,69 +1385,58 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         // STX
         case 0x86:
-            /* printf("STX Zero Page\n"); */
             W_ZERO_PAGE(cpu, X);
             cpu->rw = 1;        // write operation is over
             break;
 
         case 0x96:
-            /* printf("STX Zero Page Y\n"); */
             W_ZERO_PAGE_Y(cpu, X);
             cpu->rw = 1;
             break;
 
         case 0x8E:
-            /* printf("STX Absolute\n"); */
             W_ABSOLUTE(cpu, X);
             cpu->rw = 1;
             break;
 
         // STY
         case 0x84:
-            /* printf("STY Zero Page\n"); */
             W_ZERO_PAGE(cpu, Y);
             cpu->rw = 1;
             break;
 
         case 0x94:
-            /* printf("STY Zero Page X - %0X\n", X); */
             W_ZERO_PAGE_X(cpu, Y);
             cpu->rw = 1;
             break;
 
         case 0x8C:
-            /* printf("STY Absolute\n"); */
             W_ABSOLUTE(cpu, Y);
             cpu->rw = 1;
             break;
 
         case 0xE8:
-            /* printf("INX Implied\n"); */
             X += 1;
             ZF_NF(X);
             break;
 
         case 0xC8:
-            /* printf("INY Implied\n"); */
             Y += 1;
             ZF_NF(Y);
             break;
 
         case 0xCA:
-            /* printf("DEX Implied\n"); */
             X -= 1;
             ZF_NF(X);
             break;
 
         case 0x88:
-            /* printf("DEY Implied\n"); */
             Y -= 1;
             ZF_NF(Y);
             break;
 
         // CPX
         case 0xE0:
-            /* printf("CPX Immediate\n"); */
             IMMEDIATE(cpu);
             temp = X - DATA;
             temp &= 255;
@@ -1559,7 +1445,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xE4:
-            /* printf("CPX Zero Page\n"); */
             ZERO_PAGE(cpu);
             temp = X - DATA;
             temp &= 255;
@@ -1569,7 +1454,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xEC:
-            /* printf("CPX Absolute\n"); */
             ABSOLUTE(cpu);
             temp = X - DATA;
             temp &= 255;
@@ -1580,7 +1464,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
 
         // CPY
         case 0xC0:
-            /* printf("CPY Immediate\n"); */
             IMMEDIATE(cpu);
             temp = Y - DATA;
             temp &= 255;
@@ -1589,7 +1472,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xC4:
-            /* printf("CPY Zero Page\n"); */
             ZERO_PAGE(cpu);
             temp = Y - DATA;
             temp &= 255;
@@ -1599,7 +1481,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xCC:
-            /* printf("CPY Absolute\n"); */
             ABSOLUTE(cpu);
             temp = Y - DATA;
             temp &= 255;
@@ -1609,25 +1490,21 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xAA:
-            /* printf("TAX Implied\n"); */
             X = A;
             ZF_NF(X);
             break;
 
         case 0x8A:
-            /* printf("TXA Implied\n"); */
             A = X;
             ZF_NF(A);
             break;
 
         case 0xA8:
-            /* printf("TAY Implied\n"); */
             Y = A;
             ZF_NF(Y);
             break;
 
         case 0x98:
-            /* printf("TYA Implied\n"); */
             A = Y;
             ZF_NF(Y);
             break;
@@ -1635,7 +1512,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         // STACK OPERATIONS
         
         case 0x20:
-            /* printf("JSR Absolute\n"); */
             FETCH_ADL(cpu);     // T1
             // Store ADL        // T2
             // PCH
@@ -1650,7 +1526,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x60:
-            /* printf("RTS Implied\n"); */
             // Decode RTS       // T1
             PULL_STACK(cpu);    // T2, T3
             adl = cpu->data_bus;
@@ -1663,7 +1538,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x48:
-            /* printf("PHA Implied\n"); */
             // Interpret PHA. Hold P-Counter    \\ T1
             PUSH_STACK(cpu, A);     // T2
             cpu->rw = 1;
@@ -1671,35 +1545,29 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x68:
-            /* printf("PLA Implied\n"); */
             // Interpret instruction, Hold P-Counter        // T1
             PULL_STACK(cpu);        // T2
             A = cpu->data_bus;      // T3
-            /* printf("S - %0X, A - %0X\n", A, SP); */
             ZF_NF(A);
             cycles = 4;
             break;
 
         case 0x9A:
-            /* printf("TXS Implied\n"); */
             SP = X;
             break;
 
         case 0xBA:
-            /* printf("TSX Implied\n"); */
             X = SP;
             ZF_NF(X);
             break;
             
         case 0x08:
-            /* printf("PHP Implied\n"); */
             PUSH_STACK(cpu, PS.value | 0x10);
             cpu->rw = 1;
             cycles = 3;
             break;
 
         case 0x28:
-            /* printf("PLP Implied\n"); */
             temp = BF;
             PULL_STACK(cpu);
             PS.value = cpu->data_bus;
@@ -1709,7 +1577,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x40:
-            /* printf("RTI Implied\n"); */
             // Decode RTI   // T1
             temp = BF;
             PULL_STACK(cpu);        // T2 and T3 // FLAGS
@@ -1726,7 +1593,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x00:
-            /* printf("BRK Implied\n"); */
             cpu->pc += 1;
             // Now PC is already BRK + 2 . There is no holding of pc
             PUSH_STACK(cpu, (cpu->pc >> 8));    // T1, T2 PCH
@@ -1747,16 +1613,10 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         // The accumulator mode only takes 2 cycles
         
         case 0x4A:
-            /* printf("LSR Accumulator\n"); */
             SHIFT_RIGHT(A);
-            /* CF = A & 1; */
-            /* A = A >> 1; */
-            /* NF = 0; */
-            /* ZF = A == 0; */
             break;
 
         case 0x46:
-            /* printf("LSR Zero Page\n"); */
             ZERO_PAGE(cpu);     // T1 and T2
             // T3
             SHIFT_RIGHT(DATA);
@@ -1768,7 +1628,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x56:
-            /* printf("LSR Zero Page X\n"); */
             ZERO_PAGE_X(cpu);   // T1 and T2
             // T3
             SHIFT_RIGHT(DATA);
@@ -1780,45 +1639,35 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x4E:
-            /* printf("LSR Absolute\n"); */
             ABSOLUTE(cpu);      // T1 and T2 and T3
             // T4
             SHIFT_RIGHT(DATA);
             cpu->rw = 0;
             // T4
-            /* cpu->mem[cpu->address_bus] = DATA;  // T5 */
             cpu->cpu_write(cpu);
             cpu->rw = 1;
             cycles = 6;
             break;
 
         case 0x5E:
-            /* printf("LSR Absolute X\n"); */
             ABSOLUTE_X(cpu);
             // T5
             SHIFT_RIGHT(DATA);
             cpu->rw = 0;
             // T5
-            /* cpu->mem[cpu->address_bus] = DATA;  // T6 */
             cpu->cpu_write(cpu);
             cpu->rw = 1;
             cycles = 7;
             break;
 
         case 0x0A:
-            /* printf("ASL Accumulator\n"); */
-            /* CF = A>>7; */
-            /* A = A << 1; */
-            /* ZF_NF(A); */
             SHIFT_LEFT(A);
             break;
 
         case 0x06:
-            /* printf("ASL Zero Page\n"); */
             ZERO_PAGE(cpu);     // T1 and T2
             // T3
             SHIFT_LEFT(DATA);
-            /* printf("DATA - %0X\n", DATA); */
             cpu->rw = 0;
             // T3
             cpu->mem[bal] = DATA;   // T4
@@ -1827,7 +1676,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
             
         case 0x16:
-            /* printf("ASL Zero Page X\n"); */
             ZERO_PAGE_X(cpu);     // T1 and T2
             // T3
             SHIFT_LEFT(DATA);
@@ -1839,13 +1687,11 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x0E:
-            /* printf("ASL Absolute\n"); */
             ABSOLUTE(cpu);      // T1 and T2 and T3
             // T4
             SHIFT_LEFT(DATA);
             cpu->rw = 0;
             // T4
-            /* cpu->mem[cpu->address_bus] = DATA;   // T5 */
             cpu->cpu_write(cpu);
             cpu->rw = 1;
             cycles = 6;
@@ -1926,17 +1772,11 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x1E:
-            /* printf("ASL Absolute X\n"); */
-            /* FETCH_ADL(cpu);     // T1 */
-            /* FETCH_ADH(cpu);     // T2 */
-            /* cpu->address_bus = (adh<<8)|(adl + X);      // T3 */
-            /* DATA = cpu->mem[cpu->address_bus];          // T4 */
             ABSOLUTE_X(cpu);
             // T5
             SHIFT_LEFT(DATA);
             cpu->rw = 0;
             // T5
-            /* cpu->mem[cpu->address_bus] = DATA;      // T6 */
             cpu->cpu_write(cpu);
             cpu->rw = 1;
             cycles = 7;
@@ -2002,16 +1842,10 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x2A:
-            /* printf("ROL Accumulator\n"); */
-            /* temp = CF; */
-            /* CF = A>>7; */
-            /* A = (A << 1)|temp; */
-            /* ZF_NF(A); */
             ROTATE_LEFT(A);
             break;
 
         case 0x26:
-            /* printf("ROL Zero Page\n"); */
             ZERO_PAGE(cpu);     // T1 and T2
             // T3
             ROTATE_LEFT(DATA);
@@ -2023,7 +1857,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x36:
-            /* printf("ROL Zero Page X\n"); */
             ZERO_PAGE_X(cpu);       // T1 and T2
             // T3
             ROTATE_LEFT(DATA);
@@ -2035,27 +1868,23 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x2E:
-            /* printf("ROL Absolute\n"); */
             ABSOLUTE(cpu);      // T1 and T2 and T3
             // T4
             ROTATE_LEFT(DATA);
             cpu->rw = 0;
             // T4
-            /* cpu->mem[cpu->address_bus] = DATA;   // T5 */
             cpu->cpu_write(cpu);
             cpu->rw = 1;
             cycles = 6;
             break;
 
         case 0x3E:
-            /* printf("ROL Absolute X\n"); */
             ABSOLUTE_X(cpu);
             // T5
             ROTATE_LEFT(DATA);
             cpu->rw = 0;
             // T5
             cpu->cpu_write(cpu);
-            /* cpu->mem[cpu->address_bus] = DATA;      // T6 */
             cpu->rw = 1;
             cycles = 7;
             break;
@@ -2141,17 +1970,10 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x6A:
-            /* printf("ROR Accumulator\n"); */
-            /* temp = CF; */
-            /* NF = CF; */
-            /* CF = A & 1; */
-            /* A = (A >> 1) | (temp << 7); */
-            /* ZF = A == 0; */
             ROTATE_RIGHT(A);
             break;
 
         case 0x66:
-            /* printf("ROR Zero Page\n"); */
             ZERO_PAGE(cpu);     // T1 and T2
             ROTATE_RIGHT(DATA); // T3
             cpu->rw = 0;
@@ -2161,41 +1983,34 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0x76:
-            /* printf("ROR Zero Page X\n"); */
             ZERO_PAGE_X(cpu);       // T1 and T2
             ROTATE_RIGHT(DATA);     // T3
             cpu->rw = 0;
-            /* cpu->cpu_write(cpu); */
             cpu->mem[bal] = DATA;  // T4
             cpu->rw = 1;
             cycles = 6;
             break;
             
         case 0x6E:
-            /* printf("ROR Absolute\n"); */
             ABSOLUTE(cpu);      // T1 and T2 and T3
             ROTATE_RIGHT(DATA); // T4
             cpu->rw = 0;
             cpu->cpu_write(cpu);
-            /* cpu->mem[cpu->address_bus] = DATA; */
             cpu->rw = 1;
             cycles = 6;
             break;
 
         case 0x7E:
-            /* printf("ROR Absolute X\n"); */
             ABSOLUTE_X(cpu);
             ROTATE_RIGHT(DATA);     // T5
             cpu->rw = 0;
             cpu->cpu_write(cpu);
-            /* cpu->mem[cpu->address_bus] = DATA;      // T6 */
             cpu->rw = 1;
             cycles = 7;
             break;
 
         // INC DEC
         case 0xE6:
-            /* printf("INC Zero Page\n"); */
             ZERO_PAGE(cpu);
             DATA += 1;
             ZF_NF(DATA);
@@ -2206,7 +2021,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xF6:
-            /* printf("INC Zero Page X\n"); */
             ZERO_PAGE_X(cpu);
             DATA += 1;
             ZF_NF(DATA);
@@ -2217,31 +2031,26 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xEE:
-            /* printf("INC Absolute\n"); */
             ABSOLUTE(cpu);
             DATA += 1;
             ZF_NF(DATA);
             cpu->rw = 0;
-            /* cpu->mem[cpu->address_bus] = DATA; */
             cpu->cpu_write(cpu);
             cpu->rw = 1;
             cycles = 6;
             break;
 
         case 0xFE:
-            /* printf("INC Absolute X\n"); */
             ABSOLUTE_X(cpu);
             DATA += 1;
             ZF_NF(DATA);
             cpu->rw = 0;
             cpu->cpu_write(cpu);
-            /* cpu->mem[cpu->address_bus] = DATA; */
             cpu->rw = 1;
             cycles = 7;
             break;
 
         case 0xC6:
-            /* printf("DEC Zero Page\n"); */
             ZERO_PAGE(cpu);
             DATA -= 1;
             ZF_NF(DATA);
@@ -2252,7 +2061,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xD6:
-            /* printf("DEC Zero Page X\n"); */
             ZERO_PAGE_X(cpu);
             DATA -= 1;
             ZF_NF(DATA);
@@ -2263,31 +2071,26 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             break;
 
         case 0xCE:
-            /* printf("DEC Absolute\n"); */
             ABSOLUTE(cpu);
             DATA -= 1;
             ZF_NF(DATA);
             cpu->rw = 0;
-            /* cpu->mem[cpu->address_bus] = DATA; */
             cpu->cpu_write(cpu);
             cpu->rw = 1;
             cycles = 6;
             break;
 
         case 0xDE:
-            /* printf("DEC Absolute X\n"); */
             ABSOLUTE_X(cpu);
             DATA -= 1;
             ZF_NF(DATA);
             cpu->rw = 0;
             cpu->cpu_write(cpu);
-            /* cpu->mem[cpu->address_bus] = DATA; */
             cpu->rw = 1;
             cycles = 7;
             break;
 
         case 0xEA:
-            /* printf("NOP Implied\n"); */
             break;
 
         // Unoffical OP Codes
