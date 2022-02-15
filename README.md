@@ -10,5 +10,6 @@ Emulator is tested on linux. SDL2 must be installed. Sound is not emulated yet.
 
 **Screenshots of emulator running some games**
 
-![Galaxian](https://github.com/DipeshChouhan/CNes/blob/main/images/games1.jpg)
+![Games1](https://github.com/DipeshChouhan/CNes/blob/main/images/games1.jpg)
+![Games2](https://github.com/DipeshChouhan/CNes/blob/main/images/games2.jpg)
 
