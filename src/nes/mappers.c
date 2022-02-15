@@ -42,7 +42,6 @@ int vertical_mirroring(int addr) {
         return addr & 0x3FF;
     }
 
-    // addr < 0x1000
     return (addr & 0x3FF) + 0x400;
 }
 

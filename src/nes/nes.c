@@ -102,6 +102,10 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
                 exit(1);
             }
 
+            if (mapper->have_prg_ram) {
+                mapper->prg_ram = malloc(0x2000);
+            }
+
             mapper->prg_banks = malloc(0x4000 * prg_rom_size);
             memcpy(mapper->prg_banks, data + count, 0x4000 * prg_rom_size);
             count += 0x4000 * prg_rom_size;
@@ -113,8 +117,6 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
             } else {
                 mapper->chr_banks = malloc(0x2000 * chr_rom_size);
                 memcpy(mapper->chr_banks, data + count, 0x2000 * chr_rom_size);
-                mapper->free_chr_banks = 1;
-                --chr_rom_size;
             }
             mapper->chr_rom_size = chr_rom_size;
             cpu->cpu_read = mmc1_read;
@@ -122,8 +124,9 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
             mapper->chr_read = mmc1_chr_read;
             mapper->chr_write = mmc1_chr_write;
             mapper->registers[0] = 0;  // reset temprory register
-            mapper->registers[1] = 0;   // write counter
-            mapper->registers[6] = 3;   // fix last bank at 0xC000
+            mapper->registers[7] = 0;   // write counter
+            mapper->registers[1] = (chr_rom_size < 2) ? 1 : 0x1F;
+            mapper->registers[2] = 3;   // fix last bank at 0xC000
             break;
 
         case 2:
@@ -201,5 +204,9 @@ void power_on_nes(char *game_file) {
     free(mapper->prg_banks);
 
     free(mapper->chr_banks);
+
+    if (mapper->have_prg_ram) {
+        free(mapper->prg_ram);
+    }
 }
 

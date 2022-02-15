@@ -44,7 +44,9 @@
 #define OAMDMA_CYCLE(_cpu)                                                  \
     if (oamdma_count < 512) {                                               \
         if ((oamdma_count & 1) == 0) {                                      \
-            ppu->oam[oamdma_addr & 0xFF] = cpu->mem[cpu_oamdma_addr++];     \
+            _cpu->address_bus = cpu_oamdma_addr++;                          \
+            _cpu->cpu_read(_cpu);                                           \
+            ppu->oam[oamdma_addr & 0xFF] = _cpu->data_bus;                  \
             ++oamdma_addr;                                                  \
         }                                                                   \
         cycles = 3;                                                         \
@@ -52,6 +54,7 @@
     } else {                                                                \
         cycles = 3;                                                         \
         if (cpu->total_cycles & 1) {                                        \
+            cycles *= 3;                                                    \
         }                                                                   \
         ppu->oam_dma = 0;                                                   \
         oamdma_count = 0;                                                   \
@@ -111,11 +114,13 @@ void print_sprites_x(int *latch) {
     at_low = at_low | ((at_latch & 1) ? 0xFF : 0x00);   \
     at_high = at_high | ((at_latch & 2) ? 0xFF : 0x00); \
 
-#define UPDATE_BG_REGISTERS()   \
+#define UPDATE_BG_REGISTERS()       \
+    if (PPUMASK_BG_SHOW(ppu->ppu_mask)) {   \
         bg_low <<= 1;               \
         bg_high <<= 1;              \
         at_low <<= 1;               \
         at_high <<= 1;              \
+    }                               \
 
 
 #define BACKGROUND_TILES()                                                          \

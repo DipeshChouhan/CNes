@@ -6,6 +6,7 @@
 typedef struct {
     unsigned char *prg_banks;
     unsigned char *chr_banks;
+    unsigned char *prg_ram;
     unsigned char current_prg_bank;
     unsigned char current_chr_bank;
     unsigned char free_prg_banks;
