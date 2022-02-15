@@ -6,6 +6,8 @@
 Emulator is tested on linux. SDL2 must be installed. Sound is not emulated yet.
 **Input** - F (A), D (B), Arrow Keys (Directions) and Enter (start) and Space(select).
 
+**Supported mappers - NROM, UXROM, CNROM, MMC1, GXROM**
+
 **Screenshots of emulator running some games of NROM and UxROM mappers**
 
 ![Galaxian](https://github.com/DipeshChouhan/CNes/blob/main/images/galaxian.png)

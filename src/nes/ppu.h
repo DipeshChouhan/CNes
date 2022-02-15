@@ -3,7 +3,6 @@
 
 #include "../mos_6502/cpu_impl.h"
 
-#define PATTERN_TABLES_SIZE 0x2000  // two pattern tables of 4kb each
 #define NAMETABLES_SIZE 0x800       // 2 name_tables
 
         /* Address range	Size	Description */
@@ -87,7 +86,6 @@
 
 
 typedef struct {
-    unsigned char ptables[PATTERN_TABLES_SIZE];
     unsigned char nametables[NAMETABLES_SIZE];
     unsigned char palette[0x20];
     unsigned char data_latch;

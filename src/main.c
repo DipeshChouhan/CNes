@@ -6,7 +6,7 @@
 
 #define DEBUG_ON
 int main(int argc, char* argv[]) {
-    power_on_nes("../test/Tetris (U) [!].nes");
+    power_on_nes("../test/Chip 'n Dale Rescue Rangers 2 (U).nes");
     return 0;
     
 }
