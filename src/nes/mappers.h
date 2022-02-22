@@ -49,6 +49,11 @@ void mmc1_write(struct Cpu *cpu);
 int mmc1_chr_read(int vram_addr);
 void mmc1_chr_write(unsigned char data, int vram_addr);
 
+void mmc3_read(struct Cpu *cpu);
+void mmc3_write(struct Cpu *cpu);
+int mmc3_chr_read(int vram_addr);
+void mmc3_chr_write(unsigned char data, int vram_addr);
+
 void gxrom_read(struct Cpu *cpu);
 void gxrom_write(struct Cpu *cpu);
 int gxrom_chr_read(int vram_addr);
