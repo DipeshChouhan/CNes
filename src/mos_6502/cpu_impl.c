@@ -14,12 +14,10 @@
 
 
 #define FETCH_OPCODE(_cpu)                  \
-    _cpu->sync = 1;                         \
     _cpu->address_bus = _cpu->pc;            \
     _cpu->cpu_read(_cpu);                   \
     _cpu->ir = _cpu->data_bus;              \
     _cpu->pc += 1;                          \
-    _cpu->sync = 0;                         \
 
 #define PAGE_CROSSED                        \
     if (temp>>8 != cpu->address_bus>>8) {   \
@@ -27,7 +25,6 @@
     }                                       \
 
 #define PUSH_STACK(_cpu, _val)              \
-    _cpu->rw = 0;                           \
     _cpu->mem[(0x1<<8)|_cpu->sp] = _val;    \
     _cpu->sp -= 1;                          \
 
@@ -83,7 +80,6 @@
 #define W_ABSOLUTE(_cpu, _val)              \
     FETCH_ADL(_cpu);                        \
     FETCH_ADH(_cpu);                        \
-    _cpu->rw = 0;                           \
     _cpu->data_bus = _val;                  \
     _cpu->address_bus = (adh<<8)|adl;       \
     _cpu->cpu_write(_cpu);                  \
@@ -96,7 +92,6 @@
 
 #define W_ZERO_PAGE(_cpu, _val)             \
     FETCH_BAL(_cpu);                        \
-    _cpu->rw = 0;                           \
     _cpu->mem[bal] = _val;                  \
     cycles = 3;                             \
 
@@ -108,7 +103,6 @@
 
 #define W_ZERO_PAGE_X(_cpu, _val)                   \
     FETCH_BAL(_cpu);                                \
-    _cpu->rw = 0;                                   \
     _cpu->mem[(uint8_t)(bal + _cpu->x)] = _val;     \
     cycles = 4;                                     \
 
@@ -120,7 +114,6 @@
 
 #define W_ZERO_PAGE_Y(_cpu, _val)                   \
     FETCH_BAL(_cpu);                                \
-    _cpu->rw = 0;                                   \
     _cpu->mem[(uint8_t)(bal + _cpu->y)] = _val;     \
     cycles = 4;                                     \
 
@@ -136,7 +129,6 @@
 #define W_ABSOLUTE_X(_cpu, _val)                    \
     FETCH_ADL(_cpu);                                \
     FETCH_ADH(_cpu);                                \
-    _cpu->rw = 0;                                   \
     _cpu->address_bus = (adh<<8)|adl;               \
     _cpu->address_bus += _cpu->x;                   \
     _cpu->data_bus = _val;                          \
@@ -154,7 +146,6 @@
 #define W_ABSOLUTE_Y(_cpu, _val)                    \
     FETCH_ADL(_cpu);                                \
     FETCH_ADH(_cpu);                                \
-    _cpu->rw = 0;                                   \
     _cpu->address_bus = (adh<<8)|adl;               \
     _cpu->address_bus += _cpu->y;                   \
     _cpu->data_bus = _val;                          \
@@ -173,7 +164,6 @@
     bal += _cpu->x;                                     \
     adl = _cpu->mem[(uint8_t)bal];           \
     adh = _cpu->mem[(uint8_t)(bal + 1)];     \
-    _cpu->rw = 0;                                       \
     _cpu->address_bus = (adh<<8)|adl;                   \
     _cpu->data_bus = _val;                              \
     cycles = 6;                                     \
@@ -193,7 +183,6 @@
     FETCH_BAL(_cpu);                                    \
     adl = _cpu->mem[bal];                    \
     adh = _cpu->mem[(uint8_t)(bal + 1)];               \
-    _cpu->rw = 0;                                       \
     _cpu->address_bus = (adh<<8)|adl;                   \
     _cpu->address_bus += _cpu->y;                       \
     _cpu->data_bus = _val;                              \
@@ -299,7 +288,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         PUSH_STACK(cpu, (cpu->pc >> 8));    // T1, T2 PCH
         PUSH_STACK(cpu, (cpu->pc & 255));   // T3 PCL
         PUSH_STACK(cpu, PS.value);    // T4
-        cpu->rw = 1;
         FETCH_ADDR(cpu, NMI_VECTOR_LOW);  // T5
         adl = cpu->data_bus;
         FETCH_ADDR(cpu, NMI_VECTOR_HIGH); // T6
@@ -444,43 +432,36 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         case 0x85:
             // Zero Page
             W_ZERO_PAGE(cpu, A);
-            cpu->rw = 1;
             break;
             
         case 0x95:
             // Zero Page X
             W_ZERO_PAGE_X(cpu, A);
-            cpu->rw = 1;
             break;
 
         case 0x8D:
             // Absolute
             W_ABSOLUTE(cpu, A);
-            cpu->rw = 1;
             break;
 
         case 0x9D:
             // Absolute X
             W_ABSOLUTE_X(cpu, A);
-            cpu->rw = 1;
             break;
 
         case 0x99:
             // Absolute Y
             W_ABSOLUTE_Y(cpu, A);
-            cpu->rw = 1;
             break;
 
         case 0x81:
             // Indexed Indirect
             W_INDEXED_INDIRECT(cpu, A);
-            cpu->rw = 1;
             break;
         
         case 0x91:
             // Indirect Indexed
             W_INDIRECT_INDEXED(cpu, A);
-            cpu->rw = 1;
             break;
 
         // SAX Unoffical Opcode
@@ -488,25 +469,21 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         case 0x83:
             // Indexed Indirect SAX
             W_INDEXED_INDIRECT(cpu, (A & X));
-            cpu->rw = 1;
             break;
 
         case 0x87:
             // Zero Page SAX
             W_ZERO_PAGE(cpu, (A & X));
-            cpu->rw = 1;
             break;
 
         case 0x8F:
             // Absolute SAX
             W_ABSOLUTE(cpu, (A & X));
-            cpu->rw = 1;
             break;
 
         case 0x97:
             // Zero Page Y SAX
             W_ZERO_PAGE_Y(cpu, (A & X));
-            cpu->rw = 1;
             break;
 
 
@@ -1386,33 +1363,27 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         // STX
         case 0x86:
             W_ZERO_PAGE(cpu, X);
-            cpu->rw = 1;        // write operation is over
             break;
 
         case 0x96:
             W_ZERO_PAGE_Y(cpu, X);
-            cpu->rw = 1;
             break;
 
         case 0x8E:
             W_ABSOLUTE(cpu, X);
-            cpu->rw = 1;
             break;
 
         // STY
         case 0x84:
             W_ZERO_PAGE(cpu, Y);
-            cpu->rw = 1;
             break;
 
         case 0x94:
             W_ZERO_PAGE_X(cpu, Y);
-            cpu->rw = 1;
             break;
 
         case 0x8C:
             W_ABSOLUTE(cpu, Y);
-            cpu->rw = 1;
             break;
 
         case 0xE8:
@@ -1516,10 +1487,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             // Store ADL        // T2
             // PCH
             PUSH_STACK(cpu, (cpu->pc >> 8));        // T3
-            cpu->rw = 1;
             // PCL
             PUSH_STACK(cpu, (cpu->pc & 255));       // T4
-            cpu->rw = 1;
             FETCH_ADH(cpu);                         // T5
             cpu->pc = (adh<<8)|adl;
             cycles = 6;
@@ -1540,7 +1509,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         case 0x48:
             // Interpret PHA. Hold P-Counter    \\ T1
             PUSH_STACK(cpu, A);     // T2
-            cpu->rw = 1;
             cycles = 3;
             break;
 
@@ -1563,7 +1531,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             
         case 0x08:
             PUSH_STACK(cpu, PS.value | 0x10);
-            cpu->rw = 1;
             cycles = 3;
             break;
 
@@ -1599,7 +1566,6 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             PUSH_STACK(cpu, (cpu->pc & 255));   // T3 PCL
             BF = 1;
             PUSH_STACK(cpu, PS.value);    // T4
-            cpu->rw = 1;
             FETCH_ADDR(cpu, IRQ_VECTOR_LOW);  // T5
             adl = cpu->data_bus;
             FETCH_ADDR(cpu, IRQ_VECTOR_HIGH); // T6
@@ -1620,10 +1586,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE(cpu);     // T1 and T2
             // T3
             SHIFT_RIGHT(DATA);
-            cpu->rw = 0;
             // T3
             cpu->mem[bal] = DATA;       // T4
-            cpu->rw = 1;
             cycles = 5;
             break;
 
@@ -1631,10 +1595,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE_X(cpu);   // T1 and T2
             // T3
             SHIFT_RIGHT(DATA);
-            cpu->rw = 0;
             // T3
             cpu->mem[bal] = DATA;       // T4
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -1642,10 +1604,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE(cpu);      // T1 and T2 and T3
             // T4
             SHIFT_RIGHT(DATA);
-            cpu->rw = 0;
             // T4
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -1653,10 +1613,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE_X(cpu);
             // T5
             SHIFT_RIGHT(DATA);
-            cpu->rw = 0;
             // T5
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 7;
             break;
 
@@ -1668,10 +1626,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE(cpu);     // T1 and T2
             // T3
             SHIFT_LEFT(DATA);
-            cpu->rw = 0;
             // T3
             cpu->mem[bal] = DATA;   // T4
-            cpu->rw = 1;
             cycles = 5;
             break;
             
@@ -1679,10 +1635,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE_X(cpu);     // T1 and T2
             // T3
             SHIFT_LEFT(DATA);
-            cpu->rw = 0;
             // T3
             cpu->mem[bal] = DATA;   // T4
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -1690,10 +1644,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE(cpu);      // T1 and T2 and T3
             // T4
             SHIFT_LEFT(DATA);
-            cpu->rw = 0;
             // T4
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -1775,10 +1727,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE_X(cpu);
             // T5
             SHIFT_LEFT(DATA);
-            cpu->rw = 0;
             // T5
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 7;
             break;
 
@@ -1849,10 +1799,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE(cpu);     // T1 and T2
             // T3
             ROTATE_LEFT(DATA);
-            cpu->rw = 0;
             // T3
             cpu->mem[bal] = DATA;   // T4
-            cpu->rw = 1;
             cycles = 5;
             break;
 
@@ -1860,10 +1808,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE_X(cpu);       // T1 and T2
             // T3
             ROTATE_LEFT(DATA);
-            cpu->rw = 0;
             // T3
             cpu->mem[bal] = DATA;   // T4
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -1871,10 +1817,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE(cpu);      // T1 and T2 and T3
             // T4
             ROTATE_LEFT(DATA);
-            cpu->rw = 0;
             // T4
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -1882,10 +1826,8 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE_X(cpu);
             // T5
             ROTATE_LEFT(DATA);
-            cpu->rw = 0;
             // T5
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 7;
             break;
 
@@ -1976,36 +1918,28 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
         case 0x66:
             ZERO_PAGE(cpu);     // T1 and T2
             ROTATE_RIGHT(DATA); // T3
-            cpu->rw = 0;
             cpu->mem[bal] = DATA;   // T4
-            cpu->rw = 1;
             cycles = 5;
             break;
 
         case 0x76:
             ZERO_PAGE_X(cpu);       // T1 and T2
             ROTATE_RIGHT(DATA);     // T3
-            cpu->rw = 0;
             cpu->mem[bal] = DATA;  // T4
-            cpu->rw = 1;
             cycles = 6;
             break;
             
         case 0x6E:
             ABSOLUTE(cpu);      // T1 and T2 and T3
             ROTATE_RIGHT(DATA); // T4
-            cpu->rw = 0;
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 6;
             break;
 
         case 0x7E:
             ABSOLUTE_X(cpu);
             ROTATE_RIGHT(DATA);     // T5
-            cpu->rw = 0;
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 7;
             break;
 
@@ -2014,9 +1948,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE(cpu);
             DATA += 1;
             ZF_NF(DATA);
-            cpu->rw = 0;
             cpu->mem[bal] = DATA;
-            cpu->rw = 1;
             cycles = 5;
             break;
 
@@ -2024,9 +1956,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE_X(cpu);
             DATA += 1;
             ZF_NF(DATA);
-            cpu->rw = 0;
             cpu->mem[bal] = DATA;
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -2034,9 +1964,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE(cpu);
             DATA += 1;
             ZF_NF(DATA);
-            cpu->rw = 0;
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -2044,9 +1972,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE_X(cpu);
             DATA += 1;
             ZF_NF(DATA);
-            cpu->rw = 0;
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 7;
             break;
 
@@ -2054,9 +1980,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE(cpu);
             DATA -= 1;
             ZF_NF(DATA);
-            cpu->rw = 0;
             cpu->mem[bal] = DATA;
-            cpu->rw = 1;
             cycles = 5;
             break;
 
@@ -2064,9 +1988,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ZERO_PAGE_X(cpu);
             DATA -= 1;
             ZF_NF(DATA);
-            cpu->rw = 0;
             cpu->mem[bal] = DATA;
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -2074,9 +1996,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE(cpu);
             DATA -= 1;
             ZF_NF(DATA);
-            cpu->rw = 0;
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 6;
             break;
 
@@ -2084,9 +2004,7 @@ unsigned int cpu_cycle(struct Cpu *cpu) {
             ABSOLUTE_X(cpu);
             DATA -= 1;
             ZF_NF(DATA);
-            cpu->rw = 0;
             cpu->cpu_write(cpu);
-            cpu->rw = 1;
             cycles = 7;
             break;
 

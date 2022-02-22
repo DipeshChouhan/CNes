@@ -18,9 +18,11 @@ void mmc1_read(struct Cpu *cpu) {
 
     if (cpu->address_bus < 0x6000) return;
 
-    if(cpu->address_bus < 0x8000 && cpu->address_bus > 0x5FFF && mapper->have_prg_ram) {
-        // prg ram
-        cpu->data_bus = mapper->prg_ram[cpu->address_bus & 0x1FFF];
+
+    if (cpu->address_bus < 0x8000 && cpu->address_bus > 0x5FFF) {
+        if (mapper->have_prg_ram) {
+            cpu->data_bus = mapper->prg_ram[cpu->address_bus & 0x1FFF];
+        }
         return;
     }
 

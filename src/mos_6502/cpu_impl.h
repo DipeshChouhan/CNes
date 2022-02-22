@@ -34,12 +34,9 @@ union flags {
     uint8_t data_bus;       // bi-directional bus
     uint16_t address_bus;   // uni-directional bus
 
-    uint8_t rdy;            // ready pin
     uint8_t res;            // res pin
     uint8_t nmi;            // nmi pin
     uint8_t irq;            // irq pin
-    uint8_t rw;             // read write pin
-    uint8_t sync;           // sync pin
     unsigned int total_cycles;
     void (*cpu_read)(struct Cpu *cpu);
     void (*cpu_write)(struct Cpu *cpu);
