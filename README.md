@@ -3,7 +3,7 @@
 
 **Contains a mos 6502 assembler which is written in golang (Very basic)**
 
-Emulator is tested on linux. SDL2 must be installed. Sound is not emulated yet.
+Emulator is tested on linux. SDL2 must be installed. Sound is not emulated yet (emulated soon).
 **Input** - F (A), D (B), Arrow Keys (Directions) and Enter (start) and Space(select).
 
 **Supported mappers - NROM, UXROM, CNROM, MMC1, GXROM**
