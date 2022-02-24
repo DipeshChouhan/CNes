@@ -11,6 +11,8 @@ typedef struct {
     unsigned char have_prg_ram;
     unsigned char chr_rom_size;
     unsigned char registers[10]; // enough for majority of mappers
+    unsigned char irq_counter;
+    unsigned char irq_status;
     int (*chr_read)(int vram_add);
     void (*chr_write)(unsigned char data, int vram_addr);
 } Mapper;

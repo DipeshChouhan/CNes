@@ -144,7 +144,17 @@ void loadMapper(char *game_file, struct Cpu *cpu) {
             mapper->chr_write = cnrom_chr_write;
             break;
 
-
+        case 4:
+            printf("MMC3 mapper\n");
+            mapper->chr_rom_size = chr_rom_size;
+            mapper->prg_rom_size = (prg_rom_size * 2) - 1;  // 8KB PRG Banks
+            init_mapper(prg_rom_size, chr_rom_size, data);
+            cpu->cpu_read = mmc3_read;
+            cpu->cpu_write = mmc3_write;
+            mapper->chr_read = mmc3_chr_read;
+            mapper->chr_write = mmc3_chr_write;
+            break;
+            
         case 66:
             // gxrom
             printf("GXROM mapper\n");
@@ -173,7 +183,6 @@ void power_on_nes(char *game_file) {
     struct Cpu cpu;
     Ppu p;
     p.total_sprites = 0;
-    p.total_cycles = 0;
     p.oam_dma = 0;
     p.write_toggle = 0;
     p.ppu_status = 0;

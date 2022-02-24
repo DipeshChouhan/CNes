@@ -10,6 +10,7 @@
 #define R5 5
 #define R6 6
 #define R7 7
+#define IQR_COUNTER_LATCH 9
 
 void mmc3_read(struct Cpu *cpu) {
 
@@ -92,7 +93,7 @@ void mmc3_write(struct Cpu *cpu) {
                 // R0 and R1 ignore bottom bit
                 mapper->registers[temp] = cpu->data_bus & 0b11111110;
 
-            } else if ((mapper->registers[BANK_SELECT] & 7) > 5) {
+            } else if (temp > 5) {
                 // R6 and R7 ignore top two bits
                 mapper->registers[temp] = cpu->data_bus & 0b00111111;
 
@@ -103,6 +104,7 @@ void mmc3_write(struct Cpu *cpu) {
             // even address 
             // Bank Select
             mapper->registers[BANK_SELECT] = cpu->data_bus;
+            // printf("bank select - %d\n", cpu->data_bus);
         }
 
     } else if (cpu->address_bus < 0xC000) {
@@ -122,16 +124,23 @@ void mmc3_write(struct Cpu *cpu) {
         // 0xC000 - 0xDFFF
         if (cpu->address_bus & 1) {
             // odd address
+            // printf("irq reload\n");
         } else {
             // even address
+            mapper->registers[IQR_COUNTER_LATCH] = cpu->data_bus;
+            // printf("irq latch\n");
         }
 
     } else {
         // 0xE000 - 0xFFFF
         if (cpu->address_bus & 1) {
             // odd address
+            mapper->irq_status = 1;
+            // printf("irq enable\n");
         } else {
             // even address
+            mapper->irq_status = 0;
+            // printf("irq disable\n");
         }
 
     }

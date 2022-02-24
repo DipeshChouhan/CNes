@@ -419,6 +419,7 @@ SPRITE_FETCH:
                     sprites_attrs[sprites_to_render] = ppu->oam2[oam_count + 2];
                     sprite_flip = sprites_attrs[sprites_to_render] & 0x80;
                     if (PPUCTRL_SPRITE_SIZE(ppu->ppu_ctrl)) {
+                        // 8x16 sprite
                         addr_latch = ((ppu->oam2[oam_count + 1] & 1) << 12) | 
                             ((ppu->oam2[oam_count + 1] & 0b11111110) << 4);
 
