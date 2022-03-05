@@ -1,3 +1,4 @@
 test/
 TODO.txt
 tools/asm6502/Makefile
+tools/asm6502/asm_test_files/
