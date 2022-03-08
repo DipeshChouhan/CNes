@@ -1,0 +1,60 @@
+
+(* syntax of asm6502 assembly language *)
+
+
+statements = { macro_stat | proc_stat | data_stat | const_stat }
+
+macro_stat = "macro", identifier, ":", [ { instruction | label | call } ], "end"
+
+proc_stat = "proc", identifier, ":", [ { instruction } ], "end"
+data_stat = "data", identifier, "=", data, end
+
+const_stat = "const", identifier, "=", constant, end
+
+instructions = assembler_instr | assembly_instr, end
+
+label = identifier ":", end
+
+call = identifier, "(", ")", end
+
+assembler_instr = "@", identifier, "(", args, ")"
+
+assembly_instr = keyword, [ immediate | zeroPage | zeroPageX | 
+                            zeroPageY | absolute | absoluteX | 
+                            absoluteY | indirectX | indirectY |
+                            accumulator | implied | indirect ] 
+
+immediate = keyword, byte 
+
+implied = keyword
+zeroPage = keyword, "$", byte
+
+zeroPageX = keyword, "$", byte, ",", "X" | "x"
+
+zeroPageY = keyword, "$", byte, ",", "Y" | "y"
+
+absolute = keyword, "$", short
+
+absoluteX = keyword, "$", short, "X" | "x"
+
+absoluteY = keyword, "$", short, "Y" | "y"
+
+indirect = "JMP", "(", "$", short, ")"
+
+indirectX = keyword, "(", "$", byte, ",", "X" | "x", ")"
+
+indirectX = keyword, "(", "$", byte, ",", "Y" | "y", ")"
+
+accumulator = keyword, "A" | "a"
+
+constant = (* a constant expression which can be evaluate at compile time *)
+
+byte = (* a 8 bit number *)
+
+short (* a 16 bit number *)
+
+identifier = (* a string literal *)
+
+keyword = (* 6502 opcode *)
+
+end = (* a newline character *)

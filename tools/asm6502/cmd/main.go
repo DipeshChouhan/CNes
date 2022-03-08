@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+    "asm6502/internal/assembler"
 )
 
 const VERSION = "0.0"
@@ -14,9 +15,12 @@ func main() {
 
     cmdUtils.getInputs()
 
-    if cmdUtils.totalFiles > 0 {
-        for i := 0; i < len(cmdUtils.inputCodes[0].codeLines); i += 1 {
-            println(cmdUtils.inputCodes[0].codeLines[i])
+    for i := 0; i < cmdUtils.totalFiles; i += 1 {
+        inputCode := cmdUtils.inputCodes[i]
+        if inputCode.err != nil {
+            println(inputCode.err.Error())
+            continue
         }
+        assembler.Assemble(inputCode.codeLines)
     }
 }
